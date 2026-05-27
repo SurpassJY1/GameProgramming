@@ -1,4 +1,3 @@
-# Unity generated folders
 [Ll]ibrary/
 [Tt]emp/
 [Oo]bj/
@@ -7,7 +6,6 @@
 [Ll]ogs/
 [Uu]ser[Ss]ettings/
 
-# Unity cache and local settings
 *.csproj
 *.sln
 *.user
@@ -18,8 +16,7 @@
 *.mdb
 *.opendb
 *.VC.db
-sysinfo.txt
 
-# OS files
 .DS_Store
-Thumbs.db
+.vscode/
+.idea/

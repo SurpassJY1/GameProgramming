@@ -1,6 +1,6 @@
 using UnityEngine;
 
-/// Exit trigger. The rule check lives in GameManager so UI and feedback stay consistent.
+/// Exit trigger. The rule check lives in GameManager so UI feedback stays consistent.
 public class ExitDoor : MonoBehaviour
 {
     SpriteRenderer sr;

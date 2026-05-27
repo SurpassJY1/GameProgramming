@@ -1,6 +1,6 @@
 using UnityEngine;
 
-/// Pickup that grants a temporary buff or extra life on contact.
+/// Legacy classroom shooter pickup kept only so old assets still compile.
 public class PowerUp : MonoBehaviour
 {
     public enum Kind { Rapid, Shield, ExtraLife }
@@ -27,12 +27,6 @@ public class PowerUp : MonoBehaviour
 
     public void Collect(Player p)
     {
-        switch (kind)
-        {
-            case Kind.Rapid:     p.GrantRapid(duration); break;
-            case Kind.Shield:    p.GrantShield(duration); break;
-            case Kind.ExtraLife: GameManager.I.GainLife(); break;
-        }
         if (sharedAudio != null && pickupClip != null) sharedAudio.PlayOneShot(pickupClip, 0.6f);
         Destroy(gameObject);
     }

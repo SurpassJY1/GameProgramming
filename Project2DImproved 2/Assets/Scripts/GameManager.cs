@@ -1,30 +1,25 @@
 using System;
 using UnityEngine;
 
-/// Central state for Dungeon Key Run. The scene is assembled by GameBootstrap,
-/// while this class owns the rules: lives, key state, pause, victory, and fail.
+/// Central state for the Dungeon Key Run vertical slice.
 public class GameManager : MonoBehaviour
 {
     public static GameManager I { get; private set; }
 
-    public enum Phase { Menu, Playing, Paused, Victory, GameOver }
+    public enum Phase { Menu, Playing, Paused, Won, GameOver }
     public Phase phase = Phase.Menu;
 
     [Header("Tuning")]
     public int startLives = 3;
 
     public int lives;
-    public int score;
-    public int highScore;
-    public int level = 1;
     public bool hasKey;
     public float elapsed;
-    public string objective = "Find the key, avoid enemies, then reach the exit.";
+    public string objective = "Find the gold key.";
 
     public event Action OnStateChanged;
     public event Action OnGameStarted;
-    public event Action OnGameOver;
-    public event Action OnVictory;
+    public event Action OnRunEnded;
 
     void Awake()
     {
@@ -49,11 +44,9 @@ public class GameManager : MonoBehaviour
     public void StartGame()
     {
         lives = startLives;
-        score = 0;
-        level = 1;
         hasKey = false;
         elapsed = 0f;
-        objective = "Explore the dungeon and collect the gold key.";
+        objective = "Find the gold key, then reach the blue exit.";
         phase = Phase.Playing;
         Time.timeScale = 1f;
         OnGameStarted?.Invoke();
@@ -62,36 +55,10 @@ public class GameManager : MonoBehaviour
 
     public void CollectKey()
     {
-        if (hasKey) return;
+        if (phase != Phase.Playing || hasKey) return;
+
         hasKey = true;
-        objective = "Key collected. Reach the blue exit door.";
-        OnStateChanged?.Invoke();
-    }
-
-    public void LoseLife()
-    {
-        if (phase != Phase.Playing) return;
-
-        lives = Mathf.Max(0, lives - 1);
-        objective = lives > 0
-            ? "You were hit. Keep moving and reach the exit."
-            : "You were defeated by the dungeon guards.";
-        OnStateChanged?.Invoke();
-
-        if (lives == 0) GameOver();
-    }
-
-    public void GainLife()
-    {
-        lives++;
-        objective = "Life restored.";
-        OnStateChanged?.Invoke();
-    }
-
-    public void AddScore(int delta)
-    {
-        score += delta;
-        if (score > highScore) highScore = score;
+        objective = "Key collected. The blue exit is unlocked.";
         OnStateChanged?.Invoke();
     }
 
@@ -101,12 +68,35 @@ public class GameManager : MonoBehaviour
 
         if (!hasKey)
         {
-            objective = "The exit is locked. Find the gold key first.";
+            objective = "The exit is locked. Collect the gold key first.";
             OnStateChanged?.Invoke();
             return;
         }
 
-        Victory();
+        phase = Phase.Won;
+        objective = "Dungeon cleared.";
+        Time.timeScale = 0f;
+        OnRunEnded?.Invoke();
+        OnStateChanged?.Invoke();
+    }
+
+    public void PlayerHit()
+    {
+        if (phase != Phase.Playing) return;
+
+        lives = Mathf.Max(0, lives - 1);
+        objective = lives > 0
+            ? "Careful. Avoid the guards and find the exit."
+            : "You were caught by the dungeon guards.";
+
+        if (lives == 0)
+        {
+            phase = Phase.GameOver;
+            Time.timeScale = 0f;
+            OnRunEnded?.Invoke();
+        }
+
+        OnStateChanged?.Invoke();
     }
 
     public void Pause()
@@ -122,22 +112,6 @@ public class GameManager : MonoBehaviour
         if (phase != Phase.Paused) return;
         phase = Phase.Playing;
         Time.timeScale = 1f;
-        OnStateChanged?.Invoke();
-    }
-
-    public void Victory()
-    {
-        phase = Phase.Victory;
-        Time.timeScale = 0f;
-        OnVictory?.Invoke();
-        OnStateChanged?.Invoke();
-    }
-
-    public void GameOver()
-    {
-        phase = Phase.GameOver;
-        Time.timeScale = 0f;
-        OnGameOver?.Invoke();
         OnStateChanged?.Invoke();
     }
 

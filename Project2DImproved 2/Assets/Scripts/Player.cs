@@ -1,32 +1,25 @@
 using UnityEngine;
 
-/// Top-down dungeon player: 8-way movement, wall collision, key pickup,
-/// exit interaction, and brief invulnerability after enemy contact.
+/// Top-down player movement with manual wall blocking and short hit immunity.
 public class Player : MonoBehaviour
 {
     public float moveSpeed = 4.8f;
-    public float invulnAfterHit = 1.0f;
+    public float radius = 0.32f;
+    public float invulnerabilitySeconds = 1.1f;
+    public LayerMask wallMask;
+    public AudioClip keyClip;
     public AudioClip hitClip;
-    public AudioClip pickupClip;
-    public AudioClip doorClip;
+    public AudioClip winClip;
 
-    // Kept for compatibility with older prototype scripts that may still exist.
-    public GameObject bulletPrefab;
-    public float rapidTimer;
-    public float shieldTimer;
-    public bool HasShield => false;
-    public bool HasRapid => false;
-
-    Rigidbody2D rb;
+    Vector3 startPosition;
+    float invulnerabilityTimer;
     AudioSource audioSrc;
     SpriteRenderer sr;
     Color baseColor;
-    Vector2 input;
-    float invulnTimer;
 
     void Awake()
     {
-        rb = GetComponent<Rigidbody2D>();
+        startPosition = transform.position;
         audioSrc = GetComponent<AudioSource>();
         if (audioSrc == null) audioSrc = gameObject.AddComponent<AudioSource>();
         audioSrc.playOnAwake = false;
@@ -42,75 +35,97 @@ public class Player : MonoBehaviour
 
     void Update()
     {
-        if (GameManager.I == null || GameManager.I.phase != GameManager.Phase.Playing)
+        if (GameManager.I == null || GameManager.I.phase != GameManager.Phase.Playing) return;
+
+        Vector2 input = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical")).normalized;
+        MoveWithWallCheck(input);
+
+        if (invulnerabilityTimer > 0f) invulnerabilityTimer -= Time.deltaTime;
+        UpdateTint();
+    }
+
+    void MoveWithWallCheck(Vector2 input)
+    {
+        if (input.sqrMagnitude <= 0f) return;
+
+        Vector2 current = transform.position;
+        Vector2 delta = input * (moveSpeed * Time.deltaTime);
+        if (!Physics2D.CircleCast(current, radius, delta.normalized, delta.magnitude, wallMask))
         {
-            input = Vector2.zero;
+            transform.position = current + delta;
             return;
         }
 
-        input = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical")).normalized;
-        if (input.sqrMagnitude > 0.01f)
-        {
-            float angle = Mathf.Atan2(input.y, input.x) * Mathf.Rad2Deg - 90f;
-            transform.rotation = Quaternion.Euler(0f, 0f, angle);
-        }
+        Vector2 xDelta = new Vector2(delta.x, 0f);
+        if (Mathf.Abs(xDelta.x) > 0.001f &&
+            !Physics2D.CircleCast(current, radius, xDelta.normalized, Mathf.Abs(xDelta.x), wallMask))
+            transform.position += (Vector3)xDelta;
 
-        if (invulnTimer > 0f) invulnTimer -= Time.deltaTime;
-        UpdateDamageTint();
+        Vector2 yDelta = new Vector2(0f, delta.y);
+        if (Mathf.Abs(yDelta.y) > 0.001f &&
+            !Physics2D.CircleCast(transform.position, radius, yDelta.normalized, Mathf.Abs(yDelta.y), wallMask))
+            transform.position += (Vector3)yDelta;
     }
 
-    void FixedUpdate()
+    void UpdateTint()
     {
-        if (rb == null || GameManager.I == null || GameManager.I.phase != GameManager.Phase.Playing) return;
-        rb.MovePosition(rb.position + input * moveSpeed * Time.fixedDeltaTime);
+        if (sr == null) return;
+
+        if (invulnerabilityTimer > 0f)
+        {
+            sr.color = Mathf.PingPong(Time.unscaledTime * 10f, 1f) > 0.5f
+                ? new Color(1f, 0.55f, 0.55f, 0.75f)
+                : baseColor;
+        }
+        else
+        {
+            sr.color = baseColor;
+        }
     }
 
     void ResetForNewRun()
     {
-        transform.position = new Vector3(-6.5f, -3.6f, 0f);
-        transform.rotation = Quaternion.identity;
-        invulnTimer = 0f;
+        transform.position = startPosition;
+        invulnerabilityTimer = 0f;
         if (sr != null) sr.color = baseColor;
     }
 
     void OnTriggerEnter2D(Collider2D other)
     {
-        var key = other.GetComponent<KeyPickup>();
+        KeyPickup key = other.GetComponent<KeyPickup>();
         if (key != null)
         {
             key.Collect();
-            if (pickupClip != null) audioSrc.PlayOneShot(pickupClip, 0.7f);
+            Play(keyClip, 0.8f);
             return;
         }
 
-        if (other.GetComponent<ExitDoor>() != null)
+        ExitDoor exit = other.GetComponent<ExitDoor>();
+        if (exit != null)
         {
-            if (doorClip != null) audioSrc.PlayOneShot(doorClip, 0.7f);
             GameManager.I.TryExit();
+            if (GameManager.I.phase == GameManager.Phase.Won) Play(winClip, 0.8f);
             return;
         }
 
-        if (other.GetComponent<Enemy>() != null) HandleEnemyContact();
+        Enemy enemy = other.GetComponent<Enemy>();
+        if (enemy != null) TakeHit(enemy.transform.position);
     }
 
-    void HandleEnemyContact()
+    public void TakeHit(Vector3 source)
     {
-        if (invulnTimer > 0f) return;
+        if (invulnerabilityTimer > 0f || GameManager.I.phase != GameManager.Phase.Playing) return;
 
-        invulnTimer = invulnAfterHit;
-        if (hitClip != null) audioSrc.PlayOneShot(hitClip, 0.8f);
-        CameraShake.Pulse(0.25f, 0.25f);
-        GameManager.I.LoseLife();
+        invulnerabilityTimer = invulnerabilitySeconds;
+        Play(hitClip, 0.7f);
+        GameManager.I.PlayerHit();
+
+        Vector3 away = (transform.position - source).normalized;
+        transform.position += away * 0.35f;
     }
 
-    void UpdateDamageTint()
+    void Play(AudioClip clip, float volume)
     {
-        if (sr == null) return;
-        sr.color = invulnTimer > 0f && Mathf.PingPong(Time.unscaledTime * 12f, 1f) > 0.5f
-            ? new Color(1f, 0.45f, 0.45f, 0.65f)
-            : baseColor;
+        if (clip != null) audioSrc.PlayOneShot(clip, volume);
     }
-
-    public void GrantRapid(float seconds) { rapidTimer = Mathf.Max(rapidTimer, seconds); }
-    public void GrantShield(float seconds) { shieldTimer = Mathf.Max(shieldTimer, seconds); }
 }
