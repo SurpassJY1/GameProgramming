@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// All menu panels live on one Canvas and toggle visibility through this script.
-/// Pages: Main, Instructions, Credits, Pause, GameOver.
+/// Pages: Main, Instructions, Credits, Pause, End.
 public class Menus : MonoBehaviour
 {
     public GameObject mainPage;
@@ -25,14 +25,8 @@ public class Menus : MonoBehaviour
     {
         var gm = GameManager.I;
         gm.OnStateChanged += SyncToPhase;
-        gm.OnGameOver += () =>
-        {
-            if (gameOverScoreText != null)
-                gameOverScoreText.text =
-                    "Final score: " + gm.score + "\n" +
-                    "High score: " + gm.highScore +
-                    (gm.score >= gm.highScore ? "  *** NEW! ***" : "");
-        };
+        gm.OnVictory += () => SetEndText("Victory!", "You collected the key and escaped the dungeon.");
+        gm.OnGameOver += () => SetEndText("Game Over", "You ran out of lives. Try a safer route next time.");
         SyncToPhase();
     }
 
@@ -42,7 +36,8 @@ public class Menus : MonoBehaviour
         bool inMenu = phase == GameManager.Phase.Menu;
         if (mainPage != null) mainPage.SetActive(inMenu);
         if (pausePage != null) pausePage.SetActive(phase == GameManager.Phase.Paused);
-        if (gameOverPage != null) gameOverPage.SetActive(phase == GameManager.Phase.GameOver);
+        if (gameOverPage != null)
+            gameOverPage.SetActive(phase == GameManager.Phase.GameOver || phase == GameManager.Phase.Victory);
         // Sub-pages always start hidden when phase changes.
         if (!inMenu)
         {
@@ -71,6 +66,13 @@ public class Menus : MonoBehaviour
     public void OnRestart()      { Click(); CleanupRunActors(); GameManager.I.StartGame(); }
     public void OnReturnHome()   { Click(); CleanupRunActors(); GameManager.I.ReturnToMenu(); }
 
+    void SetEndText(string title, string body)
+    {
+        if (gameOverScoreText == null) return;
+        gameOverScoreText.text = title + "\n" + body + "\nTime: "
+            + Mathf.FloorToInt(GameManager.I.elapsed) + "s";
+    }
+
     void ShowOnly(GameObject page)
     {
         if (mainPage != null) mainPage.SetActive(page == mainPage);
@@ -78,15 +80,14 @@ public class Menus : MonoBehaviour
         if (creditsPage != null) creditsPage.SetActive(page == creditsPage);
     }
 
-    /// Wipe enemies / bullets / power-ups so a restart starts clean.
-    /// Templates are stored inactive so FindObjectsByType skips them.
+    /// Reset runtime pickups and player position so a restart starts clean.
     void CleanupRunActors()
     {
-        foreach (var e in Object.FindObjectsByType<Enemy>(FindObjectsSortMode.None))
-            Destroy(e.gameObject);
         foreach (var b in Object.FindObjectsByType<Bullet>(FindObjectsSortMode.None))
             Destroy(b.gameObject);
-        foreach (var p in Object.FindObjectsByType<PowerUp>(FindObjectsSortMode.None))
-            Destroy(p.gameObject);
+        foreach (var e in Object.FindObjectsByType<Enemy>(FindObjectsSortMode.None))
+            e.ResetEnemy();
+        foreach (var k in Object.FindObjectsByType<KeyPickup>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            k.gameObject.SetActive(true);
     }
 }
