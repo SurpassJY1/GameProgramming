@@ -1,64 +1,104 @@
 using UnityEngine;
 
-/// Falls toward the bottom; "Chaser" variants curve toward the player.
+/// Dungeon guard. Patrol enemies move between two points; chasers wake up when
+/// the player is close. Older shooter modes remain so legacy scripts compile.
 public class Enemy : MonoBehaviour
 {
-    public enum Kind { Straight, Chaser, Zigzag }
+    public enum Kind { Straight, Chaser, Zigzag, Patrol }
 
-    public Kind kind = Kind.Straight;
-    public float speed = 3.5f;
+    public Kind kind = Kind.Patrol;
+    public float speed = 2.0f;
     public int scoreReward = 10;
     public AudioClip deathClip;
-    public Transform player;       // wired by spawner; null for Straight
+    public Transform player;
+    public Vector2 patrolOffset = new Vector2(2.5f, 0f);
+    public float chaseRange = 3.2f;
 
+    Vector3 startPosition;
+    Vector3 patrolTarget;
     float bornX;
     float bornTime;
     AudioSource sharedAudio;
 
     void Start()
     {
+        startPosition = transform.position;
+        patrolTarget = startPosition + (Vector3)patrolOffset;
         bornX = transform.position.x;
         bornTime = Time.time;
-        // One shared AudioSource on the Camera covers death blips so destroyed
-        // enemies still play their sound.
         if (Camera.main != null) sharedAudio = Camera.main.GetComponent<AudioSource>();
     }
 
     void Update()
     {
-        Vector3 p = transform.position;
+        if (GameManager.I != null && GameManager.I.phase != GameManager.Phase.Playing) return;
+
         switch (kind)
         {
-            case Kind.Straight:
-                p += Vector3.down * speed * Time.deltaTime;
+            case Kind.Patrol:
+                Patrol();
                 break;
             case Kind.Chaser:
-                Vector3 toPlayer = (player != null)
-                    ? (player.position - p).normalized
-                    : Vector3.down;
-                // Bias downward so they actually leave the screen.
-                Vector3 dir = (toPlayer + Vector3.down * 0.6f).normalized;
-                p += dir * speed * Time.deltaTime;
+                ChaseOrPatrol();
                 break;
+            case Kind.Straight:
             case Kind.Zigzag:
-                p.y -= speed * Time.deltaTime;
-                p.x = bornX + Mathf.Sin((Time.time - bornTime) * 4f) * 1.5f;
+                LegacyShooterMove();
                 break;
         }
-        transform.position = p;
+    }
 
-        // Off-screen cleanup.
+    void Patrol()
+    {
+        transform.position = Vector3.MoveTowards(transform.position, patrolTarget, speed * Time.deltaTime);
+        if (Vector3.Distance(transform.position, patrolTarget) < 0.05f)
+        {
+            patrolTarget = Vector3.Distance(patrolTarget, startPosition) < 0.1f
+                ? startPosition + (Vector3)patrolOffset
+                : startPosition;
+        }
+    }
+
+    void ChaseOrPatrol()
+    {
+        if (player != null && Vector3.Distance(transform.position, player.position) <= chaseRange)
+        {
+            transform.position = Vector3.MoveTowards(transform.position, player.position, speed * Time.deltaTime);
+            return;
+        }
+
+        Patrol();
+    }
+
+    void LegacyShooterMove()
+    {
+        Vector3 p = transform.position;
+        if (kind == Kind.Straight)
+        {
+            p += Vector3.down * speed * Time.deltaTime;
+        }
+        else
+        {
+            p.y -= speed * Time.deltaTime;
+            p.x = bornX + Mathf.Sin((Time.time - bornTime) * 4f) * 1.5f;
+        }
+
+        transform.position = p;
         if (p.y < -7f) Destroy(gameObject);
     }
 
     public void Kill()
     {
-        if (GameManager.I != null) GameManager.I.AddScore(scoreReward);
         if (sharedAudio != null && deathClip != null) sharedAudio.PlayOneShot(deathClip, 0.5f);
-        // Tiny burst — a short scale puff before destroy.
         SpawnBurst(transform.position, GetComponent<SpriteRenderer>()?.color ?? Color.white);
         CameraShake.Pulse(0.05f, 0.08f);
         Destroy(gameObject);
+    }
+
+    public void ResetEnemy()
+    {
+        transform.position = startPosition;
+        patrolTarget = startPosition + (Vector3)patrolOffset;
     }
 
     static void SpawnBurst(Vector3 pos, Color color)
