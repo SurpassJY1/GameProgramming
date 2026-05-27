@@ -4,5 +4,8 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/StarBlaster.unity
+    guid: e0e0e0e0e0e0e0e0e0e0e0e0e0e0d001
   m_configObjects: {}

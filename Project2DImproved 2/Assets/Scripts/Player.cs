@@ -1,32 +1,25 @@
 using UnityEngine;
 
-/// Player ship: WASD/arrows movement, Space or LMB shoots upward, takes contact damage.
-/// Holds power-up state (rapid fire, shield) consumed by power-up pickups.
+/// Top-down player movement with manual wall blocking and short hit immunity.
 public class Player : MonoBehaviour
 {
-    public float moveSpeed = 7f;
-    public float fireCooldown = 0.25f;
-    public float fireCooldownRapid = 0.08f;
-    public GameObject bulletPrefab;
-    public AudioClip shootClip;
+    public float moveSpeed = 4.8f;
+    public float radius = 0.32f;
+    public float invulnerabilitySeconds = 1.1f;
+    public LayerMask wallMask;
+    public AudioClip keyClip;
     public AudioClip hitClip;
-    public float invulnAfterHit = 1.0f;
-    public Vector2 arenaHalf = new Vector2(8.5f, 4.8f);
+    public AudioClip winClip;
 
-    // Power-up state — public so HUD can read remaining timers.
-    public float rapidTimer;
-    public float shieldTimer;
-    public bool HasShield => shieldTimer > 0f;
-    public bool HasRapid => rapidTimer > 0f;
-
-    float lastShot;
-    float invulnTimer;
+    Vector3 startPosition;
+    float invulnerabilityTimer;
     AudioSource audioSrc;
     SpriteRenderer sr;
     Color baseColor;
 
     void Awake()
     {
+        startPosition = transform.position;
         audioSrc = GetComponent<AudioSource>();
         if (audioSrc == null) audioSrc = gameObject.AddComponent<AudioSource>();
         audioSrc.playOnAwake = false;
@@ -36,108 +29,103 @@ public class Player : MonoBehaviour
 
     void Start()
     {
-        // Player GameObject stays alive across restarts, so OnEnable wouldn't
-        // re-fire — subscribe to the StartGame event instead.
         if (GameManager.I != null) GameManager.I.OnGameStarted += ResetForNewRun;
         ResetForNewRun();
-    }
-
-    void ResetForNewRun()
-    {
-        transform.position = new Vector3(0f, -3f, 0f);
-        rapidTimer = 0f;
-        shieldTimer = 0f;
-        invulnTimer = 0f;
     }
 
     void Update()
     {
         if (GameManager.I == null || GameManager.I.phase != GameManager.Phase.Playing) return;
 
-        // Movement (legacy Input — works without InputSystem package).
-        float h = Input.GetAxisRaw("Horizontal");
-        float v = Input.GetAxisRaw("Vertical");
-        Vector2 dir = new Vector2(h, v).normalized;
-        Vector3 pos = transform.position + (Vector3)(dir * moveSpeed * Time.deltaTime);
-        pos.x = Mathf.Clamp(pos.x, -arenaHalf.x, arenaHalf.x);
-        pos.y = Mathf.Clamp(pos.y, -arenaHalf.y, arenaHalf.y);
-        transform.position = pos;
+        Vector2 input = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical")).normalized;
+        MoveWithWallCheck(input);
 
-        // Fire
-        if (Input.GetKey(KeyCode.Space) || Input.GetMouseButton(0))
+        if (invulnerabilityTimer > 0f) invulnerabilityTimer -= Time.deltaTime;
+        UpdateTint();
+    }
+
+    void MoveWithWallCheck(Vector2 input)
+    {
+        if (input.sqrMagnitude <= 0f) return;
+
+        Vector2 current = transform.position;
+        Vector2 delta = input * (moveSpeed * Time.deltaTime);
+        if (!Physics2D.CircleCast(current, radius, delta.normalized, delta.magnitude, wallMask))
         {
-            float cd = HasRapid ? fireCooldownRapid : fireCooldown;
-            if (Time.time - lastShot >= cd) Shoot();
+            transform.position = current + delta;
+            return;
         }
 
-        // Tick power-ups
-        if (rapidTimer > 0f) rapidTimer -= Time.deltaTime;
-        if (shieldTimer > 0f) shieldTimer -= Time.deltaTime;
-        if (invulnTimer > 0f) invulnTimer -= Time.deltaTime;
+        Vector2 xDelta = new Vector2(delta.x, 0f);
+        if (Mathf.Abs(xDelta.x) > 0.001f &&
+            !Physics2D.CircleCast(current, radius, xDelta.normalized, Mathf.Abs(xDelta.x), wallMask))
+            transform.position += (Vector3)xDelta;
 
-        // Shield glow tint
-        if (sr != null)
+        Vector2 yDelta = new Vector2(0f, delta.y);
+        if (Mathf.Abs(yDelta.y) > 0.001f &&
+            !Physics2D.CircleCast(transform.position, radius, yDelta.normalized, Mathf.Abs(yDelta.y), wallMask))
+            transform.position += (Vector3)yDelta;
+    }
+
+    void UpdateTint()
+    {
+        if (sr == null) return;
+
+        if (invulnerabilityTimer > 0f)
         {
-            if (HasShield) sr.color = Color.Lerp(baseColor, new Color(0.4f, 0.8f, 1f, 1f), 0.5f);
-            else if (invulnTimer > 0f) sr.color = (Mathf.PingPong(Time.unscaledTime * 12f, 1f) > 0.5f)
-                                                  ? new Color(1f, 0.5f, 0.5f, 0.6f) : baseColor;
-            else sr.color = baseColor;
+            sr.color = Mathf.PingPong(Time.unscaledTime * 10f, 1f) > 0.5f
+                ? new Color(1f, 0.55f, 0.55f, 0.75f)
+                : baseColor;
+        }
+        else
+        {
+            sr.color = baseColor;
         }
     }
 
-    void Shoot()
+    void ResetForNewRun()
     {
-        lastShot = Time.time;
-        if (bulletPrefab == null) return;
-        Vector3 spawn = transform.position + Vector3.up * 0.6f;
-        SpawnBullet(spawn, Quaternion.identity);
-        if (HasRapid)
-        {
-            // Triple shot while rapid.
-            SpawnBullet(spawn + Vector3.left * 0.35f, Quaternion.Euler(0, 0, 15f));
-            SpawnBullet(spawn + Vector3.right * 0.35f, Quaternion.Euler(0, 0, -15f));
-        }
-        if (shootClip != null) audioSrc.PlayOneShot(shootClip, 0.4f);
-    }
-
-    void SpawnBullet(Vector3 pos, Quaternion rot)
-    {
-        // Templates are stored inactive; enable each clone before it spawns.
-        var go = Instantiate(bulletPrefab, pos, rot);
-        go.SetActive(true);
+        transform.position = startPosition;
+        invulnerabilityTimer = 0f;
+        if (sr != null) sr.color = baseColor;
     }
 
     void OnTriggerEnter2D(Collider2D other)
     {
-        // Component-based detection — no custom tags required in TagManager.
-        if (other.GetComponent<Enemy>() != null) HandleEnemyContact(other.gameObject);
-        else
+        KeyPickup key = other.GetComponent<KeyPickup>();
+        if (key != null)
         {
-            var pu = other.GetComponent<PowerUp>();
-            if (pu != null) pu.Collect(this);
-        }
-    }
-
-    void HandleEnemyContact(GameObject enemy)
-    {
-        if (invulnTimer > 0f) return;
-
-        if (HasShield)
-        {
-            shieldTimer = 0f;                  // shield absorbs one hit
-            if (hitClip != null) audioSrc.PlayOneShot(hitClip, 0.6f);
-            CameraShake.Pulse(0.15f, 0.18f);
-            Destroy(enemy);
+            key.Collect();
+            Play(keyClip, 0.8f);
             return;
         }
 
-        if (hitClip != null) audioSrc.PlayOneShot(hitClip, 0.8f);
-        CameraShake.Pulse(0.3f, 0.35f);
-        invulnTimer = invulnAfterHit;
-        GameManager.I.LoseLife();
-        Destroy(enemy);
+        ExitDoor exit = other.GetComponent<ExitDoor>();
+        if (exit != null)
+        {
+            GameManager.I.TryExit();
+            if (GameManager.I.phase == GameManager.Phase.Won) Play(winClip, 0.8f);
+            return;
+        }
+
+        Enemy enemy = other.GetComponent<Enemy>();
+        if (enemy != null) TakeHit(enemy.transform.position);
     }
 
-    public void GrantRapid(float seconds) { rapidTimer = Mathf.Max(rapidTimer, seconds); }
-    public void GrantShield(float seconds) { shieldTimer = Mathf.Max(shieldTimer, seconds); }
+    public void TakeHit(Vector3 source)
+    {
+        if (invulnerabilityTimer > 0f || GameManager.I.phase != GameManager.Phase.Playing) return;
+
+        invulnerabilityTimer = invulnerabilitySeconds;
+        Play(hitClip, 0.7f);
+        GameManager.I.PlayerHit();
+
+        Vector3 away = (transform.position - source).normalized;
+        transform.position += away * 0.35f;
+    }
+
+    void Play(AudioClip clip, float volume)
+    {
+        if (clip != null) audioSrc.PlayOneShot(clip, volume);
+    }
 }

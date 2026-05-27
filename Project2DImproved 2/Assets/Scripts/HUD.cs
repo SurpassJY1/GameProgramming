@@ -1,57 +1,40 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-/// In-play HUD: subscribes to GameManager events and re-paints text every frame
-/// for the live timer / power-up countdowns.
+/// In-play HUD for lives, key state, timer and current objective.
 public class HUD : MonoBehaviour
 {
-    public Text scoreText;
-    public Text highScoreText;
     public Text livesText;
-    public Text levelText;
+    public Text keyText;
     public Text timerText;
-    public Text powerText;
     public Text objectiveText;
-    public Player player;
-    public GameObject root;        // whole HUD canvas — toggled with phase
+    public GameObject root;
 
     void Start()
     {
-        var gm = GameManager.I;
-        gm.OnStateChanged += Repaint;
-        gm.OnGameStarted += () =>
+        GameManager.I.OnStateChanged += Repaint;
+        GameManager.I.OnGameStarted += () =>
         {
             if (root != null) root.SetActive(true);
-            if (objectiveText != null)
-                objectiveText.text = "Survive! Shoot the falling enemies. Grab power-ups.";
+            Repaint();
         };
-        gm.OnGameOver += () => { if (root != null) root.SetActive(false); };
+        GameManager.I.OnRunEnded += () => { if (root != null) root.SetActive(false); };
         if (root != null) root.SetActive(false);
     }
 
     void Update()
     {
-        if (GameManager.I == null) return;
-        if (timerText != null)
-            timerText.text = "Time " + Mathf.FloorToInt(GameManager.I.elapsed) + "s";
-        if (powerText != null) powerText.text = BuildPowerString();
+        if (GameManager.I != null && GameManager.I.phase == GameManager.Phase.Playing) Repaint();
     }
 
     void Repaint()
     {
-        var gm = GameManager.I;
-        if (scoreText != null)     scoreText.text     = "Score " + gm.score;
-        if (highScoreText != null) highScoreText.text = "Hi " + gm.highScore;
-        if (livesText != null)     livesText.text     = "Lives " + gm.lives;
-        if (levelText != null)     levelText.text     = "Level " + gm.level;
-    }
+        GameManager gm = GameManager.I;
+        if (gm == null) return;
 
-    string BuildPowerString()
-    {
-        if (player == null) return "";
-        string s = "";
-        if (player.HasRapid)  s += "Rapid " + player.rapidTimer.ToString("F1") + "s  ";
-        if (player.HasShield) s += "Shield " + player.shieldTimer.ToString("F1") + "s";
-        return s;
+        if (livesText != null) livesText.text = "Lives: " + gm.lives;
+        if (keyText != null) keyText.text = gm.hasKey ? "Key: Collected" : "Key: Missing";
+        if (timerText != null) timerText.text = "Time: " + Mathf.FloorToInt(gm.elapsed) + "s";
+        if (objectiveText != null) objectiveText.text = gm.objective;
     }
 }
