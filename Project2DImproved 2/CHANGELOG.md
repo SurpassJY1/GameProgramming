@@ -1,80 +1,52 @@
-# Star Blaster — Change Log
+# Dungeon Key Run - Change Log
 
-## What the game was before
-Starting point was an empty Unity 2D project with only a default `SampleScene`.
+## Final Project Direction
 
-## What was added / changed in this update
+The final game direction is `Dungeon Key Run`, a Unity 2D top-down dungeon escape vertical slice. Earlier classroom shooter work is not part of the final assessment submission.
 
-### Player goal (one sentence)
-> Survive as long as you can while shooting falling enemies and grabbing
-> power-ups; chase the high score.
+## Current Vertical Slice
 
-### Menu system
-- **Main menu** with four buttons: Start, Instructions, Credits, Quit.
-- **Instructions page** explaining controls, power-ups, and the goal.
-- **Credits page** crediting code/art/audio.
-- **Pause menu** (ESC during play): Resume, Restart, Main Menu.
-- **Game Over screen**: shows final score, flags new high score, with
-  Play Again and Main Menu buttons.
-- All sub-pages have a clear `< Back` button so navigation is reversible.
+### Core Goal
 
-### HUD (`HUD.cs`)
-- Top-left: live **Score**, **High Score**, **Lives**.
-- Top-right: **Level**, **Time**, active **Power-up timers** (Rapid xs / Shield xs).
-- Bottom-center: **Objective text** ("Survive! Shoot the falling enemies. Grab
-  power-ups.").
-- Bottom-right hint: "ESC = pause".
-- Re-paints from `GameManager.OnStateChanged` events so it stays in sync
-  even on restart.
+The player explores a compact dungeon, collects the gold key, avoids guards, and reaches the blue exit door.
 
-### Gameplay improvement (the main rubric item)
-- **Three enemy types** with distinct behaviors:
-  - *Straight* — descends vertically.
-  - *Zigzag* — sine-wave horizontal sway as it falls.
-  - *Chaser* — biases toward the player.
-- **Difficulty scaling**:
-  - Spawn interval shrinks ~12% per level (floor 0.35s).
-  - Enemy speed grows ~7% per level.
-  - Type weighting shifts toward harder enemies as level rises.
-  - Level auto-advances every 25 seconds (`GameManager.secondsPerLevel`).
-- **Three power-ups**:
-  - *Rapid Fire* (yellow) — triple-shot for 6s.
-  - *Shield* (blue) — absorbs the next contact hit.
-  - *Extra Life* (pink) — +1 life.
-- Player has a brief invulnerability window after taking a hit so multiple
-  enemies can't drain lives in one frame.
+### Gameplay Systems
 
-### Feedback (audio + visual)
-- **Procedural sounds** generated in `Art2D.cs` — shoot blip, enemy noise burst,
-  player hit noise, power-up chime, button click. No audio files shipped.
-- **Camera shake** on player hits and enemy kills (`CameraShake.Pulse`).
-- **Death particles** — small color-matched dots that fly out and fade.
-- **Player tint** — blue tint while shielded, red flicker while invulnerable.
-- **High-score flag** "*** NEW! ***" on the Game Over screen when beaten.
-- High score persists between runs via `PlayerPrefs`.
+- Top-down movement using `WASD` or arrow keys.
+- Wall blocking using 2D circle casts against dungeon walls.
+- Gold key pickup that unlocks the exit.
+- Exit door that gives feedback if the key has not been collected.
+- Victory state after reaching the exit with the key.
+- Lives and game-over state when guards catch the player.
+- Pause, restart, and return-to-menu flow.
 
-### Polish
-- **Procedural sprites** generated in `Art2D.cs` (anti-aliased disc, triangle,
-  diamond, square) — zero binary assets to manage.
-- **Single-scene self-assembly**: `GameBootstrap.cs` builds the entire scene at
-  Awake, so the scene file stays trivially small and merge-friendly.
-- **Component-based collision** (no custom Tags required) — works in any default
-  Unity project without touching `TagManager.asset`.
-- **Restart hygiene**: switching from Game Over → Play Again destroys all live
-  enemies/bullets/power-ups so the next run starts clean.
+### Enemy Behaviour
 
-## What was tested
-- Complete player flow: Main → Start → Play → Pause → Resume → Play → Die →
-  Game Over → Play Again → Die → Main Menu → Instructions → Back → Credits →
-  Back → Quit.
-- Score / high score persistence across restarts.
-- Power-up timers count down on HUD; Rapid Fire produces three bullets;
-  Shield absorbs one hit and clears.
-- Difficulty visibly increases — by Level 3 spawn rate and chaser frequency
-  are noticeably higher.
-- ESC during play opens pause; ESC ignored on menu/game-over.
+- Guards patrol between two points.
+- Guards chase the player when close and visible.
+- Wall raycasts stop guards from chasing through walls.
 
-## Known limitations
-- No background music (kept silent on purpose for class demo).
-- No level-select (single endless mode).
-- No accessibility options (color-blind palette etc).
+### UI and Feedback
+
+- Main menu, instructions, credits, pause, victory, and fail pages.
+- HUD displays lives, key state, elapsed time, and objective text.
+- Key state is shown with text as well as colour.
+- Runtime-generated sounds provide button, key, hit, and win feedback.
+
+### Technical Notes
+
+- `GameBootstrap.cs` builds the runtime level, objects, and UI.
+- Sprites and audio are generated procedurally in `Art2D.cs`.
+- The active Unity scene is included in Build Settings.
+- `.gitignore` excludes Unity cache and local editor files.
+
+## Testing Evidence
+
+Testing is recorded in `../../docs/TestLog.md`. The main regression path covers menu flow, movement, collision, key pickup, locked exit, unlocked exit, guard damage, failure, pause, restart, and victory.
+
+## Known Limitations
+
+- One level only, because this is a vertical slice.
+- Manual testing only.
+- Simple guard AI rather than full pathfinding.
+- The scene filename remains `StarBlaster.unity` from earlier classroom work, but the runtime content is `Dungeon Key Run`.
