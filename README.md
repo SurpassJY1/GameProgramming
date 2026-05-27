@@ -1,8 +1,8 @@
 # Dungeon Key Run
 
-`Dungeon Key Run` is a small Unity 2D top-down adventure vertical slice. The player explores a compact dungeon, collects a gold key, avoids patrol enemies, and reaches the exit door to win.
+`Dungeon Key Run` is a small Unity 2D top-down adventure vertical slice. The player explores a compact dungeon, collects a gold key, avoids patrol guards, and reaches the exit door to win.
 
-The project is scoped for a game programming module assessment: one polished level, clear rules, stable controls, visible feedback, documented testing, and a GitHub history that shows the development process.
+The project is scoped for a game programming module assessment: one playable level, clear rules, stable controls, visible feedback, documented testing, and GitHub history that shows development progress.
 
 ## How to Run
 
@@ -22,7 +22,7 @@ The scene uses `GameBootstrap.cs` to build the full level at runtime, so no exte
 ## Main Features
 
 - 2D top-down player movement with wall collision
-- Procedural dungeon layout with walls, labels, key, exit, and enemies
+- Compact dungeon layout with walls, key, exit, and guards
 - Patrol and chase-style enemy behaviour
 - Lives, key state, timer, objective text, pause menu, victory, and game over
 - Procedural sprites and runtime-generated sound effects
@@ -39,7 +39,7 @@ GameProgramming/
     TestLog.md
     AssetCredits.md
     FinalReport.md
-    PresentationScript.md
+    PresentationPlan.md
   Project2DImproved 2/
     Assets/
     Packages/
@@ -49,3 +49,9 @@ GameProgramming/
 ## Credits
 
 All code, sprites, and sound effects are original for this project. Sprites and audio are generated procedurally in `Project2DImproved 2/Assets/Scripts/Art2D.cs`. No third-party art, music, fonts, or Asset Store packages are used.
+
+## Known Limitations
+
+- The final submission is one vertical slice level, not a full multi-level game.
+- The scene filename is still `StarBlaster.unity` from earlier classroom work, but the runtime game content is `Dungeon Key Run`.
+- Testing is recorded manually in `docs/TestLog.md`.
