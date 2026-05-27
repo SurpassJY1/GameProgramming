@@ -1,37 +1,40 @@
 using System;
 using UnityEngine;
 
-/// Central game state. One-and-only instance is created by GameBootstrap.
-/// Other scripts read/mutate state through GameManager.I and subscribe to
-/// the events for HUD updates.
+/// Central state for Dungeon Key Run. The scene is assembled by GameBootstrap,
+/// while this class owns the rules: lives, key state, pause, victory, and fail.
 public class GameManager : MonoBehaviour
 {
     public static GameManager I { get; private set; }
 
-    public enum Phase { Menu, Playing, Paused, GameOver }
+    public enum Phase { Menu, Playing, Paused, Victory, GameOver }
     public Phase phase = Phase.Menu;
 
     [Header("Tuning")]
     public int startLives = 3;
-    public float secondsPerLevel = 25f;     // auto-advance difficulty every N seconds
 
-    // Live values
+    public int lives;
     public int score;
     public int highScore;
-    public int lives;
     public int level = 1;
+    public bool hasKey;
     public float elapsed;
+    public string objective = "Find the key, avoid enemies, then reach the exit.";
 
-    // Events for HUD subscribers
-    public event Action OnStateChanged;     // score / lives / level / phase changes
+    public event Action OnStateChanged;
     public event Action OnGameStarted;
     public event Action OnGameOver;
+    public event Action OnVictory;
 
     void Awake()
     {
-        if (I != null && I != this) { Destroy(gameObject); return; }
+        if (I != null && I != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         I = this;
-        highScore = PlayerPrefs.GetInt("HighScore", 0);
     }
 
     void Update()
@@ -39,50 +42,71 @@ public class GameManager : MonoBehaviour
         if (phase != Phase.Playing) return;
 
         elapsed += Time.deltaTime;
-        int newLevel = 1 + Mathf.FloorToInt(elapsed / secondsPerLevel);
-        if (newLevel != level)
-        {
-            level = newLevel;
-            OnStateChanged?.Invoke();
-        }
-
         if (Input.GetKeyDown(KeyCode.Escape)) Pause();
+        OnStateChanged?.Invoke();
     }
 
     public void StartGame()
     {
-        score = 0;
         lives = startLives;
+        score = 0;
         level = 1;
+        hasKey = false;
         elapsed = 0f;
+        objective = "Explore the dungeon and collect the gold key.";
         phase = Phase.Playing;
         Time.timeScale = 1f;
         OnGameStarted?.Invoke();
         OnStateChanged?.Invoke();
     }
 
-    public void AddScore(int delta)
+    public void CollectKey()
     {
-        score += delta;
-        if (score > highScore)
-        {
-            highScore = score;
-            PlayerPrefs.SetInt("HighScore", highScore);
-        }
+        if (hasKey) return;
+        hasKey = true;
+        objective = "Key collected. Reach the blue exit door.";
         OnStateChanged?.Invoke();
     }
 
     public void LoseLife()
     {
+        if (phase != Phase.Playing) return;
+
         lives = Mathf.Max(0, lives - 1);
+        objective = lives > 0
+            ? "You were hit. Keep moving and reach the exit."
+            : "You were defeated by the dungeon guards.";
         OnStateChanged?.Invoke();
+
         if (lives == 0) GameOver();
     }
 
     public void GainLife()
     {
         lives++;
+        objective = "Life restored.";
         OnStateChanged?.Invoke();
+    }
+
+    public void AddScore(int delta)
+    {
+        score += delta;
+        if (score > highScore) highScore = score;
+        OnStateChanged?.Invoke();
+    }
+
+    public void TryExit()
+    {
+        if (phase != Phase.Playing) return;
+
+        if (!hasKey)
+        {
+            objective = "The exit is locked. Find the gold key first.";
+            OnStateChanged?.Invoke();
+            return;
+        }
+
+        Victory();
     }
 
     public void Pause()
@@ -98,6 +122,14 @@ public class GameManager : MonoBehaviour
         if (phase != Phase.Paused) return;
         phase = Phase.Playing;
         Time.timeScale = 1f;
+        OnStateChanged?.Invoke();
+    }
+
+    public void Victory()
+    {
+        phase = Phase.Victory;
+        Time.timeScale = 0f;
+        OnVictory?.Invoke();
         OnStateChanged?.Invoke();
     }
 
