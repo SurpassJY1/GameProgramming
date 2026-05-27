@@ -2,52 +2,30 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 
-/// Builds the entire 2D shooter scene at Awake — no prefabs/assets required.
-///
-/// What it builds:
-///   - Camera (orthographic) with CameraShake + AudioListener
-///   - GameManager singleton
-///   - Player ship + Bullet/Enemy/PowerUp prefab templates (deactivated parents)
-///   - EnemySpawner + PowerUpSpawner
-///   - Starfield background (cosmetic)
-///   - HUD canvas (score, hi-score, lives, level, time, power, objective)
-///   - Menus canvas (Main / Instructions / Credits / Pause / GameOver)
-///   - EventSystem
-///
-/// Tag-free design: trigger callbacks use GetComponent&lt;Enemy&gt;() / Bullet /
-/// PowerUp instead of CompareTag, so this project works in any default Unity
-/// project without editing TagManager.asset.
+/// Builds the complete Dungeon Key Run vertical slice at runtime.
+/// The project uses procedural sprites/audio so the repository stays small and legal-safe.
 public class GameBootstrap : MonoBehaviour
 {
+    Transform playerTransform;
+
     void Awake()
     {
         BuildCamera();
-        BuildStarfield();
         BuildGameManager();
+        BuildDungeon();
 
-        // Build templates first so spawners can reference them.
-        GameObject bullet  = BuildBulletTemplate();
-        GameObject straight = BuildEnemyTemplate("Enemy_Straight", new Color(0.95f, 0.4f, 0.4f), 6);
-        GameObject chaser   = BuildEnemyTemplate("Enemy_Chaser",   new Color(0.95f, 0.6f, 0.2f), 12);
-        GameObject zigzag   = BuildEnemyTemplate("Enemy_Zigzag",   new Color(0.85f, 0.4f, 0.85f), 8);
+        GameObject player = BuildPlayer();
+        playerTransform = player.transform;
 
-        GameObject puRapid  = BuildPowerUpTemplate("PU_Rapid",  PowerUp.Kind.Rapid,
-                                                   new Color(1f, 0.85f, 0.2f));
-        GameObject puShield = BuildPowerUpTemplate("PU_Shield", PowerUp.Kind.Shield,
-                                                   new Color(0.4f, 0.8f, 1f));
-        GameObject puLife   = BuildPowerUpTemplate("PU_Life",   PowerUp.Kind.ExtraLife,
-                                                   new Color(1f, 0.4f, 0.5f));
-
-        GameObject player = BuildPlayer(bullet);
-        BuildEnemySpawner(player.transform, straight, chaser, zigzag);
-        BuildPowerUpSpawner(puRapid, puShield, puLife);
+        BuildKey(new Vector3(5.8f, 3.3f, 0f));
+        BuildExit(new Vector3(7.1f, -3.6f, 0f));
+        BuildEnemies();
 
         BuildHUD(player.GetComponent<Player>());
         BuildMenusCanvas();
         EnsureEventSystem();
     }
 
-    // ───────────────────────── Camera + background ─────────────────────────
     void BuildCamera()
     {
         Camera cam = Camera.main;
@@ -58,166 +36,164 @@ public class GameBootstrap : MonoBehaviour
             cam = go.AddComponent<Camera>();
             go.AddComponent<AudioListener>();
         }
-        cam.transform.position = new Vector3(0, 0, -10);
+
+        cam.transform.position = new Vector3(0f, 0f, -10f);
         cam.transform.rotation = Quaternion.identity;
         cam.orthographic = true;
-        cam.orthographicSize = 5.5f;
-        cam.backgroundColor = new Color(0.04f, 0.04f, 0.09f);
+        cam.orthographicSize = 5.3f;
+        cam.backgroundColor = new Color(0.045f, 0.04f, 0.055f);
         cam.clearFlags = CameraClearFlags.SolidColor;
-        if (cam.GetComponent<CameraShake>() == null)
-            cam.gameObject.AddComponent<CameraShake>();
-        if (cam.GetComponent<AudioSource>() == null)
-            cam.gameObject.AddComponent<AudioSource>().playOnAwake = false;
+
+        if (cam.GetComponent<CameraShake>() == null) cam.gameObject.AddComponent<CameraShake>();
+        if (cam.GetComponent<AudioSource>() == null) cam.gameObject.AddComponent<AudioSource>().playOnAwake = false;
     }
 
-    void BuildStarfield()
-    {
-        GameObject root = new GameObject("Starfield");
-        for (int i = 0; i < 80; i++)
-        {
-            GameObject s = new GameObject("Star");
-            s.transform.SetParent(root.transform);
-            s.transform.position = new Vector3(
-                Random.Range(-9.5f, 9.5f), Random.Range(-5.5f, 5.5f), 5f);
-            float scale = Random.Range(0.04f, 0.10f);
-            s.transform.localScale = Vector3.one * scale;
-            var sr = s.AddComponent<SpriteRenderer>();
-            sr.sprite = Art2D.SolidCircle(Color.white * Random.Range(0.5f, 1f));
-            sr.sortingOrder = -10;
-        }
-    }
-
-    // ───────────────────────── GameManager ─────────────────────────
     void BuildGameManager()
     {
         if (GameManager.I != null) return;
-        GameObject go = new GameObject("GameManager");
-        go.AddComponent<GameManager>();
+        new GameObject("GameManager").AddComponent<GameManager>();
     }
 
-    // ───────────────────────── Player ─────────────────────────
-    GameObject BuildPlayer(GameObject bulletTemplate)
+    void BuildDungeon()
+    {
+        GameObject floor = new GameObject("DungeonFloor");
+        floor.transform.localScale = new Vector3(16.5f, 9.2f, 1f);
+        var floorSprite = floor.AddComponent<SpriteRenderer>();
+        floorSprite.sprite = Art2D.Square(new Color(0.12f, 0.11f, 0.14f));
+        floorSprite.sortingOrder = -5;
+
+        // Boundary walls.
+        BuildWall("Wall_Top", new Vector3(0f, 4.65f, 0f), new Vector2(16.5f, 0.35f));
+        BuildWall("Wall_Bottom", new Vector3(0f, -4.65f, 0f), new Vector2(16.5f, 0.35f));
+        BuildWall("Wall_Left", new Vector3(-8.25f, 0f, 0f), new Vector2(0.35f, 9.2f));
+        BuildWall("Wall_Right", new Vector3(8.25f, 0f, 0f), new Vector2(0.35f, 9.2f));
+
+        // Interior layout: enough walls to make route choice meaningful without becoming maze-heavy.
+        BuildWall("Wall_StartBarrier", new Vector3(-3.8f, -2.1f, 0f), new Vector2(0.45f, 4.0f));
+        BuildWall("Wall_CentreNorth", new Vector3(0.2f, 1.45f, 0f), new Vector2(5.2f, 0.45f));
+        BuildWall("Wall_CentreSouth", new Vector3(2.2f, -1.75f, 0f), new Vector2(4.4f, 0.45f));
+        BuildWall("Wall_KeyRoom", new Vector3(4.1f, 2.35f, 0f), new Vector2(0.45f, 3.0f));
+
+        BuildLabel("Start", new Vector3(-6.6f, -4.25f, 0f), new Color(0.7f, 1f, 0.75f));
+        BuildLabel("Key", new Vector3(5.8f, 2.7f, 0f), new Color(1f, 0.88f, 0.25f));
+        BuildLabel("Exit", new Vector3(7.1f, -3.0f, 0f), new Color(0.45f, 0.9f, 1f));
+    }
+
+    void BuildWall(string name, Vector3 pos, Vector2 size)
+    {
+        GameObject wall = new GameObject(name);
+        wall.transform.position = pos;
+        wall.transform.localScale = new Vector3(size.x, size.y, 1f);
+
+        var sr = wall.AddComponent<SpriteRenderer>();
+        sr.sprite = Art2D.Square(new Color(0.28f, 0.26f, 0.34f));
+        sr.sortingOrder = -1;
+
+        var col = wall.AddComponent<BoxCollider2D>();
+        col.size = Vector2.one;
+    }
+
+    GameObject BuildPlayer()
     {
         GameObject go = new GameObject("Player");
-        // "Player" is a built-in tag — safe to set without TagManager edits.
         go.tag = "Player";
-        go.transform.position = new Vector3(0, -3, 0);
-        go.transform.localScale = Vector3.one * 0.7f;
+        go.transform.position = new Vector3(-6.5f, -3.6f, 0f);
+        go.transform.localScale = Vector3.one * 0.68f;
 
         var sr = go.AddComponent<SpriteRenderer>();
-        sr.sprite = Art2D.Triangle(new Color(0.4f, 0.95f, 0.5f));
-        sr.sortingOrder = 2;
-
-        var col = go.AddComponent<CircleCollider2D>();
-        col.isTrigger = true;
-        col.radius = 0.35f;
-
-        var rb = go.AddComponent<Rigidbody2D>();
-        rb.bodyType = RigidbodyType2D.Kinematic;
-        rb.gravityScale = 0;
-
-        var p = go.AddComponent<Player>();
-        p.bulletPrefab = bulletTemplate;
-        p.shootClip = Art2D.Tone(880f, 0.08f);
-        p.hitClip = Art2D.Noise(0.3f, 14f);
-
-        return go;
-    }
-
-    // ───────────────────────── Templates ─────────────────────────
-    /// Bullet "prefab" — kept inactive in scene; spawners Instantiate copies.
-    GameObject BuildBulletTemplate()
-    {
-        GameObject go = new GameObject("BulletTemplate");
-        go.transform.localScale = Vector3.one * 0.18f;
-
-        var sr = go.AddComponent<SpriteRenderer>();
-        sr.sprite = Art2D.SolidCircle(new Color(1f, 1f, 0.6f));
+        sr.sprite = Art2D.Triangle(new Color(0.45f, 1f, 0.58f));
         sr.sortingOrder = 3;
 
         var col = go.AddComponent<CircleCollider2D>();
-        col.isTrigger = true;
-        col.radius = 0.5f;
+        col.radius = 0.36f;
+        col.isTrigger = false;
 
         var rb = go.AddComponent<Rigidbody2D>();
-        rb.bodyType = RigidbodyType2D.Kinematic;
-        rb.gravityScale = 0;
+        rb.bodyType = RigidbodyType2D.Dynamic;
+        rb.gravityScale = 0f;
+        rb.freezeRotation = true;
+        rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
 
-        go.AddComponent<Bullet>();
-        // Inactive template — Player.Shoot clones it and enables the clone.
-        go.SetActive(false);
+        var p = go.AddComponent<Player>();
+        p.hitClip = Art2D.Noise(0.25f, 16f);
+        p.pickupClip = Art2D.Chime(740f, 0.35f);
+        p.doorClip = Art2D.Tone(330f, 0.12f);
         return go;
     }
 
-    GameObject BuildEnemyTemplate(string name, Color color, int score)
+    void BuildKey(Vector3 pos)
     {
-        GameObject go = new GameObject(name);
-        go.transform.localScale = Vector3.one * 0.6f;
+        GameObject key = new GameObject("GoldKey");
+        key.transform.position = pos;
+        key.transform.localScale = Vector3.one * 0.5f;
 
-        var sr = go.AddComponent<SpriteRenderer>();
-        sr.sprite = Art2D.Diamond(color);
+        var sr = key.AddComponent<SpriteRenderer>();
+        sr.sprite = Art2D.Diamond(new Color(1f, 0.82f, 0.2f));
+        sr.sortingOrder = 2;
+
+        var col = key.AddComponent<CircleCollider2D>();
+        col.isTrigger = true;
+        col.radius = 0.6f;
+
+        var rb = key.AddComponent<Rigidbody2D>();
+        rb.bodyType = RigidbodyType2D.Kinematic;
+        rb.gravityScale = 0f;
+
+        key.AddComponent<KeyPickup>();
+    }
+
+    void BuildExit(Vector3 pos)
+    {
+        GameObject door = new GameObject("ExitDoor");
+        door.transform.position = pos;
+        door.transform.localScale = new Vector3(0.85f, 1.25f, 1f);
+
+        var sr = door.AddComponent<SpriteRenderer>();
+        sr.sprite = Art2D.Square(new Color(0.25f, 0.35f, 0.55f));
         sr.sortingOrder = 1;
 
-        var col = go.AddComponent<CircleCollider2D>();
+        var col = door.AddComponent<BoxCollider2D>();
         col.isTrigger = true;
-        col.radius = 0.4f;
+        col.size = Vector2.one;
 
-        var rb = go.AddComponent<Rigidbody2D>();
-        rb.bodyType = RigidbodyType2D.Kinematic;
-        rb.gravityScale = 0;
-
-        var e = go.AddComponent<Enemy>();
-        e.scoreReward = score;
-        e.deathClip = Art2D.Noise(0.15f, 30f);
-        // Inactive template — spawners clone it and enable the clone.
-        go.SetActive(false);
-        return go;
+        door.AddComponent<ExitDoor>();
     }
 
-    GameObject BuildPowerUpTemplate(string name, PowerUp.Kind kind, Color color)
+    void BuildEnemies()
     {
-        GameObject go = new GameObject(name);
-        go.transform.localScale = Vector3.one * 0.55f;
+        BuildEnemy("Guard_West", new Vector3(-1.4f, -3.25f, 0f), new Vector2(0f, 2.4f), Enemy.Kind.Patrol, 1.65f);
+        BuildEnemy("Guard_Centre", new Vector3(1.4f, 0.05f, 0f), new Vector2(2.6f, 0f), Enemy.Kind.Patrol, 1.8f);
+        BuildEnemy("Guard_KeyRoom", new Vector3(5.8f, 1.15f, 0f), new Vector2(0f, 1.9f), Enemy.Kind.Chaser, 1.55f);
+    }
 
-        var sr = go.AddComponent<SpriteRenderer>();
-        sr.sprite = Art2D.Square(color);
-        sr.sortingOrder = 1;
+    void BuildEnemy(string name, Vector3 pos, Vector2 patrolOffset, Enemy.Kind kind, float speed)
+    {
+        GameObject enemy = new GameObject(name);
+        enemy.transform.position = pos;
+        enemy.transform.localScale = Vector3.one * 0.62f;
 
-        var col = go.AddComponent<BoxCollider2D>();
+        var sr = enemy.AddComponent<SpriteRenderer>();
+        sr.sprite = Art2D.Diamond(kind == Enemy.Kind.Chaser
+            ? new Color(1f, 0.45f, 0.25f)
+            : new Color(0.9f, 0.3f, 0.35f));
+        sr.sortingOrder = 2;
+
+        var col = enemy.AddComponent<CircleCollider2D>();
         col.isTrigger = true;
-        col.size = Vector2.one * 0.9f;
+        col.radius = 0.48f;
 
-        var rb = go.AddComponent<Rigidbody2D>();
+        var rb = enemy.AddComponent<Rigidbody2D>();
         rb.bodyType = RigidbodyType2D.Kinematic;
-        rb.gravityScale = 0;
+        rb.gravityScale = 0f;
 
-        var p = go.AddComponent<PowerUp>();
-        p.kind = kind;
-        p.pickupClip = Art2D.Chime(660f, 0.4f);
-        go.SetActive(false);
-        return go;
+        var guard = enemy.AddComponent<Enemy>();
+        guard.kind = kind;
+        guard.speed = speed;
+        guard.patrolOffset = patrolOffset;
+        guard.player = playerTransform;
+        guard.deathClip = Art2D.Noise(0.15f, 30f);
     }
 
-    void BuildEnemySpawner(Transform player, GameObject straight, GameObject chaser, GameObject zigzag)
-    {
-        GameObject go = new GameObject("EnemySpawner");
-        var s = go.AddComponent<EnemySpawner>();
-        s.straightPrefab = straight;
-        s.chaserPrefab = chaser;
-        s.zigzagPrefab = zigzag;
-        s.player = player;
-    }
-
-    void BuildPowerUpSpawner(GameObject rapid, GameObject shield, GameObject life)
-    {
-        GameObject go = new GameObject("PowerUpSpawner");
-        var s = go.AddComponent<PowerUpSpawner>();
-        s.rapidPrefab = rapid;
-        s.shieldPrefab = shield;
-        s.extraLifePrefab = life;
-    }
-
-    // ───────────────────────── HUD ─────────────────────────
     void BuildHUD(Player player)
     {
         Canvas cv = MakeCanvas("HUDCanvas", 0);
@@ -225,38 +201,21 @@ public class GameBootstrap : MonoBehaviour
         hud.player = player;
         hud.root = cv.gameObject;
 
-        // Top-left strip.
-        hud.scoreText     = MakeText(cv.transform, "Score 0",   new Vector2(20, -20),
-                                     new Vector2(0, 1), 36, TextAnchor.UpperLeft, Color.white);
-        hud.highScoreText = MakeText(cv.transform, "Hi 0",      new Vector2(20, -60),
-                                     new Vector2(0, 1), 24, TextAnchor.UpperLeft,
-                                     new Color(1f, 0.9f, 0.5f));
-        hud.livesText     = MakeText(cv.transform, "Lives 3",   new Vector2(20, -100),
-                                     new Vector2(0, 1), 28, TextAnchor.UpperLeft,
-                                     new Color(1f, 0.6f, 0.6f));
+        hud.titleText = MakeText(cv.transform, "Dungeon Key Run", new Vector2(20, -20),
+            new Vector2(0, 1), 34, TextAnchor.UpperLeft, Color.white);
+        hud.livesText = MakeText(cv.transform, "Lives 3", new Vector2(20, -62),
+            new Vector2(0, 1), 28, TextAnchor.UpperLeft, new Color(1f, 0.62f, 0.62f));
+        hud.keyText = MakeText(cv.transform, "Key No", new Vector2(20, -100),
+            new Vector2(0, 1), 28, TextAnchor.UpperLeft, new Color(1f, 0.9f, 0.35f));
+        hud.timerText = MakeText(cv.transform, "Time 0s", new Vector2(-20, -20),
+            new Vector2(1, 1), 28, TextAnchor.UpperRight, Color.white);
+        hud.objectiveText = MakeText(cv.transform, "", new Vector2(0, 30),
+            new Vector2(0.5f, 0), 24, TextAnchor.LowerCenter, new Color(0.85f, 0.9f, 1f));
 
-        // Top-right strip.
-        hud.levelText  = MakeText(cv.transform, "Level 1",  new Vector2(-20, -20),
-                                  new Vector2(1, 1), 36, TextAnchor.UpperRight,
-                                  new Color(0.7f, 1f, 1f));
-        hud.timerText  = MakeText(cv.transform, "Time 0s",  new Vector2(-20, -60),
-                                  new Vector2(1, 1), 24, TextAnchor.UpperRight, Color.white);
-        hud.powerText  = MakeText(cv.transform, "",         new Vector2(-20, -100),
-                                  new Vector2(1, 1), 24, TextAnchor.UpperRight,
-                                  new Color(1f, 0.95f, 0.6f));
-
-        // Bottom-center objective.
-        hud.objectiveText = MakeText(cv.transform, "",      new Vector2(0, 30),
-                                  new Vector2(0.5f, 0), 22, TextAnchor.LowerCenter,
-                                  new Color(0.85f, 0.85f, 1f));
-
-        // ESC hint
-        MakeText(cv.transform, "ESC = pause",                new Vector2(-20, 30),
-                 new Vector2(1, 0), 18, TextAnchor.LowerRight,
-                 new Color(1, 1, 1, 0.5f));
+        MakeText(cv.transform, "Move: WASD / Arrows   ESC: Pause", new Vector2(-20, 30),
+            new Vector2(1, 0), 18, TextAnchor.LowerRight, new Color(1, 1, 1, 0.6f));
     }
 
-    // ───────────────────────── Menus canvas ─────────────────────────
     void BuildMenusCanvas()
     {
         Canvas cv = MakeCanvas("MenuCanvas", 10);
@@ -264,58 +223,46 @@ public class GameBootstrap : MonoBehaviour
         menus.clickClip = Art2D.Tone(550f, 0.07f);
 
         menus.mainPage = BuildMainPage(cv.transform, menus);
-        menus.instructionsPage = BuildInfoPage(cv.transform,
-            "How to Play",
-            "Move:  WASD or arrow keys\n" +
-            "Shoot: Space or Left Mouse\n" +
-            "Pause: ESC\n\n" +
-            "Survive enemies, grab power-ups:\n" +
-            "  Yellow  = Rapid Fire (triple shot)\n" +
-            "  Blue    = Shield (absorbs one hit)\n" +
-            "  Pink    = Extra Life",
+        menus.instructionsPage = BuildInfoPage(cv.transform, "How to Play",
+            "Move: WASD or arrow keys\nPause: ESC\n\n" +
+            "Goal: collect the gold key, avoid dungeon guards, then reach the blue exit door.\n" +
+            "The exit only opens after the key is collected.\n\n" +
+            "Design focus: one complete polished level with clear rules, feedback, and testing evidence.",
             menus.OnBackToMenu);
-        menus.creditsPage = BuildInfoPage(cv.transform,
-            "Credits",
-            "Code, art, audio: yours truly.\n" +
-            "Sprites generated procedurally (Art2D.cs).\n" +
-            "Audio synthesized procedurally (Art2D.cs).\n" +
-            "No external assets used.\n\n" +
-            "Built for the 2D Game Improvement assignment.",
+        menus.creditsPage = BuildInfoPage(cv.transform, "Credits",
+            "Code, art, and audio are original for this Unity project.\n" +
+            "Sprites are generated procedurally in Art2D.cs.\n" +
+            "Sounds are synthesized at runtime in Art2D.cs.\n" +
+            "No third-party art, music, fonts, or Asset Store packages are used.",
             menus.OnBackToMenu);
         menus.pausePage = BuildPausePage(cv.transform, menus);
-        menus.gameOverPage = BuildGameOverPage(cv.transform, menus, out menus.gameOverScoreText);
+        menus.gameOverPage = BuildEndPage(cv.transform, menus, out menus.gameOverScoreText);
     }
 
     GameObject BuildMainPage(Transform parent, Menus menus)
     {
-        GameObject page = MakePagePanel(parent, "MainPage", new Color(0, 0, 0, 0.6f));
+        GameObject page = MakePagePanel(parent, "MainPage", new Color(0, 0, 0, 0.67f));
 
-        MakeText(page.transform, "STAR BLASTER",
-            new Vector2(0, 220), new Vector2(0.5f, 0.5f), 80,
-            TextAnchor.MiddleCenter, new Color(1f, 0.95f, 0.4f));
-        MakeText(page.transform, "A 2D arcade survival shooter",
-            new Vector2(0, 150), new Vector2(0.5f, 0.5f), 26,
-            TextAnchor.MiddleCenter, new Color(1, 1, 1, 0.85f));
+        MakeText(page.transform, "DUNGEON KEY RUN", new Vector2(0, 210),
+            new Vector2(0.5f, 0.5f), 74, TextAnchor.MiddleCenter, new Color(1f, 0.9f, 0.35f));
+        MakeText(page.transform, "A focused Unity 2D top-down adventure vertical slice", new Vector2(0, 145),
+            new Vector2(0.5f, 0.5f), 25, TextAnchor.MiddleCenter, new Color(1, 1, 1, 0.85f));
 
-        MakeButton(page.transform, "Start Game",       new Vector2(0,  40), menus.OnStart);
-        MakeButton(page.transform, "Instructions",     new Vector2(0, -40), menus.OnInstructions);
-        MakeButton(page.transform, "Credits",          new Vector2(0,-120), menus.OnCredits);
-        MakeButton(page.transform, "Quit",             new Vector2(0,-200), menus.OnQuit);
-
+        MakeButton(page.transform, "Start Game", new Vector2(0, 40), menus.OnStart);
+        MakeButton(page.transform, "Instructions", new Vector2(0, -40), menus.OnInstructions);
+        MakeButton(page.transform, "Credits", new Vector2(0, -120), menus.OnCredits);
+        MakeButton(page.transform, "Quit", new Vector2(0, -200), menus.OnQuit);
         return page;
     }
 
-    GameObject BuildInfoPage(Transform parent, string title, string body,
-        UnityEngine.Events.UnityAction back)
+    GameObject BuildInfoPage(Transform parent, string title, string body, UnityEngine.Events.UnityAction back)
     {
-        GameObject page = MakePagePanel(parent, title + "Page", new Color(0, 0, 0, 0.7f));
-        MakeText(page.transform, title,
-            new Vector2(0, 230), new Vector2(0.5f, 0.5f), 60,
-            TextAnchor.MiddleCenter, new Color(1f, 0.95f, 0.4f));
-        var t = MakeText(page.transform, body,
-            new Vector2(0, 0), new Vector2(0.5f, 0.5f), 26,
+        GameObject page = MakePagePanel(parent, title + "Page", new Color(0, 0, 0, 0.72f));
+        MakeText(page.transform, title, new Vector2(0, 230), new Vector2(0.5f, 0.5f), 58,
+            TextAnchor.MiddleCenter, new Color(1f, 0.9f, 0.35f));
+        var text = MakeText(page.transform, body, new Vector2(0, 0), new Vector2(0.5f, 0.5f), 25,
             TextAnchor.MiddleCenter, Color.white);
-        t.GetComponent<RectTransform>().sizeDelta = new Vector2(800, 350);
+        text.GetComponent<RectTransform>().sizeDelta = new Vector2(900, 370);
         MakeButton(page.transform, "< Back", new Vector2(0, -250), back);
         page.SetActive(false);
         return page;
@@ -324,55 +271,63 @@ public class GameBootstrap : MonoBehaviour
     GameObject BuildPausePage(Transform parent, Menus menus)
     {
         GameObject page = MakePagePanel(parent, "PausePage", new Color(0, 0, 0, 0.7f));
-        MakeText(page.transform, "PAUSED",
-            new Vector2(0, 180), new Vector2(0.5f, 0.5f), 70,
+        MakeText(page.transform, "PAUSED", new Vector2(0, 180), new Vector2(0.5f, 0.5f), 70,
             TextAnchor.MiddleCenter, Color.white);
-        MakeButton(page.transform, "Resume",       new Vector2(0,  40), menus.OnResume);
-        MakeButton(page.transform, "Restart",      new Vector2(0, -40), menus.OnRestart);
-        MakeButton(page.transform, "Main Menu",    new Vector2(0,-120), menus.OnReturnHome);
+        MakeButton(page.transform, "Resume", new Vector2(0, 40), menus.OnResume);
+        MakeButton(page.transform, "Restart", new Vector2(0, -40), menus.OnRestart);
+        MakeButton(page.transform, "Main Menu", new Vector2(0, -120), menus.OnReturnHome);
         page.SetActive(false);
         return page;
     }
 
-    GameObject BuildGameOverPage(Transform parent, Menus menus, out Text scoreText)
+    GameObject BuildEndPage(Transform parent, Menus menus, out Text messageText)
     {
-        GameObject page = MakePagePanel(parent, "GameOverPage", new Color(0, 0, 0, 0.75f));
-        MakeText(page.transform, "GAME OVER",
-            new Vector2(0, 200), new Vector2(0.5f, 0.5f), 80,
-            TextAnchor.MiddleCenter, new Color(1f, 0.4f, 0.4f));
-        scoreText = MakeText(page.transform, "",
-            new Vector2(0, 60), new Vector2(0.5f, 0.5f), 30,
+        GameObject page = MakePagePanel(parent, "EndPage", new Color(0, 0, 0, 0.76f));
+        messageText = MakeText(page.transform, "", new Vector2(0, 110), new Vector2(0.5f, 0.5f), 42,
             TextAnchor.MiddleCenter, Color.white);
-        scoreText.GetComponent<RectTransform>().sizeDelta = new Vector2(800, 120);
-        MakeButton(page.transform, "Play Again",   new Vector2(0, -60), menus.OnRestart);
-        MakeButton(page.transform, "Main Menu",    new Vector2(0,-140), menus.OnReturnHome);
+        messageText.GetComponent<RectTransform>().sizeDelta = new Vector2(900, 220);
+        MakeButton(page.transform, "Play Again", new Vector2(0, -80), menus.OnRestart);
+        MakeButton(page.transform, "Main Menu", new Vector2(0, -160), menus.OnReturnHome);
         page.SetActive(false);
         return page;
     }
 
-    // ───────────────────────── UI helpers ─────────────────────────
+    void BuildLabel(string content, Vector3 worldPos, Color color)
+    {
+        GameObject label = new GameObject("Label_" + content);
+        label.transform.position = worldPos;
+        var text = label.AddComponent<TextMesh>();
+        text.text = content;
+        text.fontSize = 42;
+        text.characterSize = 0.08f;
+        text.anchor = TextAnchor.MiddleCenter;
+        text.alignment = TextAlignment.Center;
+        text.color = color;
+    }
+
     Canvas MakeCanvas(string name, int sortOrder)
     {
         GameObject cv = new GameObject(name);
         Canvas c = cv.AddComponent<Canvas>();
         c.renderMode = RenderMode.ScreenSpaceOverlay;
         c.sortingOrder = sortOrder;
-        var sc = cv.AddComponent<CanvasScaler>();
-        sc.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        sc.referenceResolution = new Vector2(1920, 1080);
+        var scaler = cv.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
         cv.AddComponent<GraphicRaycaster>();
         return c;
     }
 
     GameObject MakePagePanel(Transform parent, string name, Color bg)
     {
-        GameObject p = new GameObject(name);
-        p.transform.SetParent(parent, false);
-        var rt = p.AddComponent<RectTransform>();
-        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+        GameObject panel = new GameObject(name);
+        panel.transform.SetParent(parent, false);
+        var rt = panel.AddComponent<RectTransform>();
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
         rt.offsetMin = rt.offsetMax = Vector2.zero;
-        var img = p.AddComponent<Image>(); img.color = bg;
-        return p;
+        panel.AddComponent<Image>().color = bg;
+        return panel;
     }
 
     Text MakeText(Transform parent, string content, Vector2 pos, Vector2 anchor,
@@ -383,41 +338,48 @@ public class GameBootstrap : MonoBehaviour
         var rt = go.AddComponent<RectTransform>();
         rt.anchorMin = rt.anchorMax = rt.pivot = anchor;
         rt.anchoredPosition = pos;
-        rt.sizeDelta = new Vector2(800, 80);
-        Text t = go.AddComponent<Text>();
-        t.text = content;
-        t.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        t.fontSize = size; t.alignment = align; t.color = col;
-        t.horizontalOverflow = HorizontalWrapMode.Wrap;
-        t.verticalOverflow = VerticalWrapMode.Overflow;
-        return t;
+        rt.sizeDelta = new Vector2(900, 90);
+
+        Text text = go.AddComponent<Text>();
+        text.text = content;
+        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        text.fontSize = size;
+        text.alignment = align;
+        text.color = col;
+        text.horizontalOverflow = HorizontalWrapMode.Wrap;
+        text.verticalOverflow = VerticalWrapMode.Overflow;
+        return text;
     }
 
-    Button MakeButton(Transform parent, string label, Vector2 pos,
-        UnityEngine.Events.UnityAction onClick)
+    Button MakeButton(Transform parent, string label, Vector2 pos, UnityEngine.Events.UnityAction onClick)
     {
-        GameObject b = new GameObject("Btn_" + label);
-        b.transform.SetParent(parent, false);
-        var rt = b.AddComponent<RectTransform>();
+        GameObject buttonObject = new GameObject("Btn_" + label);
+        buttonObject.transform.SetParent(parent, false);
+        var rt = buttonObject.AddComponent<RectTransform>();
         rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
         rt.anchoredPosition = pos;
         rt.sizeDelta = new Vector2(360, 70);
-        var img = b.AddComponent<Image>();
-        img.color = new Color(0.2f, 0.4f, 0.85f, 0.95f);
-        var btn = b.AddComponent<Button>();
-        btn.onClick.AddListener(onClick);
 
-        GameObject t = new GameObject("Text");
-        t.transform.SetParent(b.transform, false);
-        var trt = t.AddComponent<RectTransform>();
-        trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one;
-        trt.offsetMin = trt.offsetMax = Vector2.zero;
-        var tx = t.AddComponent<Text>();
-        tx.text = label;
-        tx.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        tx.fontSize = 30; tx.alignment = TextAnchor.MiddleCenter;
-        tx.color = Color.white;
-        return btn;
+        var image = buttonObject.AddComponent<Image>();
+        image.color = new Color(0.2f, 0.36f, 0.78f, 0.95f);
+
+        var button = buttonObject.AddComponent<Button>();
+        button.onClick.AddListener(onClick);
+
+        GameObject textObject = new GameObject("Text");
+        textObject.transform.SetParent(buttonObject.transform, false);
+        var textRt = textObject.AddComponent<RectTransform>();
+        textRt.anchorMin = Vector2.zero;
+        textRt.anchorMax = Vector2.one;
+        textRt.offsetMin = textRt.offsetMax = Vector2.zero;
+
+        var text = textObject.AddComponent<Text>();
+        text.text = label;
+        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        text.fontSize = 30;
+        text.alignment = TextAnchor.MiddleCenter;
+        text.color = Color.white;
+        return button;
     }
 
     void EnsureEventSystem()
