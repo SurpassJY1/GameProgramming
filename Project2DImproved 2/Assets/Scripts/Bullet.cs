@@ -1,12 +1,10 @@
 using UnityEngine;
 
-/// Travels straight up (or along its rotation), kills enemies on contact,
-/// self-destructs after `lifetime` seconds.
+/// Legacy classroom shooter projectile kept only so old assets still compile.
 public class Bullet : MonoBehaviour
 {
     public float speed = 14f;
     public float lifetime = 1.5f;
-    public int scoreOnKill = 10;
 
     float born;
 
@@ -20,9 +18,6 @@ public class Bullet : MonoBehaviour
 
     void OnTriggerEnter2D(Collider2D other)
     {
-        var enemy = other.GetComponent<Enemy>();
-        if (enemy == null) return;
-        enemy.Kill();
-        Destroy(gameObject);
+        if (other.GetComponent<Enemy>() != null) Destroy(gameObject);
     }
 }
