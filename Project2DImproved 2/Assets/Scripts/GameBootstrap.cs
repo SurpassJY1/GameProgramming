@@ -153,10 +153,39 @@ public class GameBootstrap : MonoBehaviour
         player.keyClip = Art2D.Chime(660f, 0.35f);
         player.hitClip = Art2D.Noise(0.25f, 12f);
         player.winClip = Art2D.Chime(880f, 0.6f);
+        PlayerCombat combat = go.AddComponent<PlayerCombat>();
+        combat.fireCooldown = 0.22f;
+        combat.bulletSpeed = 12f;
+        combat.damage = 1;
+        combat.bulletLifetime = 1.2f;
+        combat.bulletPrefab = BuildPlayerBulletPrefab();
+        combat.shootClip = Art2D.Tone(920f, 0.08f, 22f);
 
         SmoothCameraFollow follow = Camera.main != null ? Camera.main.GetComponent<SmoothCameraFollow>() : null;
         if (follow != null) follow.target = go.transform;
         return go;
+    }
+
+    GameObject BuildPlayerBulletPrefab()
+    {
+        GameObject bullet = new GameObject("Player Bullet Prefab");
+        bullet.SetActive(false);
+        bullet.transform.localScale = Vector3.one * 0.18f;
+
+        SpriteRenderer sr = bullet.AddComponent<SpriteRenderer>();
+        sr.sprite = Art2D.SolidCircle(new Color(1f, 0.82f, 0.25f), 32);
+        sr.sortingOrder = 4;
+
+        CircleCollider2D collider = bullet.AddComponent<CircleCollider2D>();
+        collider.isTrigger = true;
+        collider.radius = 0.35f;
+
+        Rigidbody2D rb = bullet.AddComponent<Rigidbody2D>();
+        rb.bodyType = RigidbodyType2D.Kinematic;
+        rb.gravityScale = 0f;
+
+        bullet.AddComponent<Bullet>();
+        return bullet;
     }
 
     void BuildKey()
