@@ -184,7 +184,8 @@ public class GameBootstrap : MonoBehaviour
         rb.bodyType = RigidbodyType2D.Kinematic;
         rb.gravityScale = 0f;
 
-        bullet.AddComponent<Bullet>();
+        Bullet projectile = bullet.AddComponent<Bullet>();
+        projectile.wallMask = 1 << WallLayer;
         return bullet;
     }
 

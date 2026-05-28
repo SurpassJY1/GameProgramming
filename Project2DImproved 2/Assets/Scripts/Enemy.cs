@@ -10,13 +10,21 @@ public class Enemy : MonoBehaviour
     public float chaseSpeed = 3.0f;
     public float chaseRange = 3.0f;
     public float collisionRadius = 0.32f;
+    public int maxHealth = 3;
+    public int currentHealth;
     public LayerMask wallMask;
 
     Vector3 target;
+    SpriteRenderer sr;
+    Color baseColor;
+    float hitFlashTimer;
 
     void Start()
     {
         target = pointB;
+        currentHealth = maxHealth;
+        sr = GetComponent<SpriteRenderer>();
+        if (sr != null) baseColor = sr.color;
     }
 
     void Update()
@@ -30,6 +38,8 @@ public class Enemy : MonoBehaviour
 
         if (!chasing && Vector3.Distance(transform.position, target) < 0.05f)
             target = target == pointA ? pointB : pointA;
+
+        UpdateHitFlash();
     }
 
     bool ShouldChase()
@@ -45,6 +55,29 @@ public class Enemy : MonoBehaviour
     {
         Player p = other.GetComponent<Player>();
         if (p != null) p.TakeHit(transform.position);
+    }
+
+    public void TakeDamage(int damage, Vector3 hitSource)
+    {
+        if (GameManager.I == null || GameManager.I.phase != GameManager.Phase.Playing) return;
+
+        currentHealth = Mathf.Max(0, currentHealth - Mathf.Max(1, damage));
+        hitFlashTimer = 0.12f;
+
+        if (currentHealth <= 0) Die();
+    }
+
+    public void Die()
+    {
+        Destroy(gameObject);
+    }
+
+    void UpdateHitFlash()
+    {
+        if (sr == null || hitFlashTimer <= 0f) return;
+
+        hitFlashTimer -= Time.deltaTime;
+        sr.color = hitFlashTimer > 0f ? Color.white : baseColor;
     }
 
     void MoveWithWallCheck(Vector3 destination, float speed)
