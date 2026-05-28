@@ -9,6 +9,7 @@ public class Enemy : MonoBehaviour
     public float patrolSpeed = 2.0f;
     public float chaseSpeed = 3.0f;
     public float chaseRange = 3.0f;
+    public float collisionRadius = 0.32f;
     public LayerMask wallMask;
 
     Vector3 target;
@@ -22,11 +23,12 @@ public class Enemy : MonoBehaviour
     {
         if (GameManager.I == null || GameManager.I.phase != GameManager.Phase.Playing) return;
 
-        Vector3 destination = ShouldChase() ? player.position : target;
-        float speed = ShouldChase() ? chaseSpeed : patrolSpeed;
-        transform.position = Vector3.MoveTowards(transform.position, destination, speed * Time.deltaTime);
+        bool chasing = ShouldChase();
+        Vector3 destination = chasing ? player.position : target;
+        float speed = chasing ? chaseSpeed : patrolSpeed;
+        MoveWithWallCheck(destination, speed);
 
-        if (!ShouldChase() && Vector3.Distance(transform.position, target) < 0.05f)
+        if (!chasing && Vector3.Distance(transform.position, target) < 0.05f)
             target = target == pointA ? pointB : pointA;
     }
 
@@ -43,5 +45,31 @@ public class Enemy : MonoBehaviour
     {
         Player p = other.GetComponent<Player>();
         if (p != null) p.TakeHit(transform.position);
+    }
+
+    void MoveWithWallCheck(Vector3 destination, float speed)
+    {
+        Vector2 current = transform.position;
+        Vector2 toDestination = (Vector2)destination - current;
+        float stepDistance = speed * Time.deltaTime;
+        if (toDestination.sqrMagnitude <= 0.0001f) return;
+
+        Vector2 delta = Vector2.ClampMagnitude(toDestination, stepDistance);
+        if (!Physics2D.CircleCast(current, collisionRadius, delta.normalized, delta.magnitude, wallMask))
+        {
+            transform.position = current + delta;
+            return;
+        }
+
+        // Slide on one axis when diagonal movement clips a wall.
+        Vector2 xDelta = new Vector2(delta.x, 0f);
+        if (Mathf.Abs(xDelta.x) > 0.001f &&
+            !Physics2D.CircleCast(current, collisionRadius, xDelta.normalized, Mathf.Abs(xDelta.x), wallMask))
+            transform.position += (Vector3)xDelta;
+
+        Vector2 yDelta = new Vector2(0f, delta.y);
+        if (Mathf.Abs(yDelta.y) > 0.001f &&
+            !Physics2D.CircleCast(transform.position, collisionRadius, yDelta.normalized, Mathf.Abs(yDelta.y), wallMask))
+            transform.position += (Vector3)yDelta;
     }
 }
