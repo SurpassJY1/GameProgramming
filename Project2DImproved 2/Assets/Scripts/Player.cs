@@ -10,9 +10,12 @@ public class Player : MonoBehaviour
     public AudioClip keyClip;
     public AudioClip hitClip;
     public AudioClip winClip;
+    public float footstepSpawnInterval = 0.08f;
+    public float footstepSpeedThreshold = 0.2f;
 
     Vector3 startPosition;
     float invulnerabilityTimer;
+    float footstepTimer;
     AudioSource audioSrc;
     SpriteRenderer sr;
     Color baseColor;
@@ -37,23 +40,28 @@ public class Player : MonoBehaviour
     {
         if (GameManager.I == null || GameManager.I.phase != GameManager.Phase.Playing) return;
 
+        TryUnstuckFromWalls();
+
         Vector2 input = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical")).normalized;
-        MoveWithWallCheck(input);
+        float movedDistance = MoveWithWallCheck(input);
+        EmitFootsteps(movedDistance);
 
         if (invulnerabilityTimer > 0f) invulnerabilityTimer -= Time.deltaTime;
         UpdateTint();
     }
 
-    void MoveWithWallCheck(Vector2 input)
+    float MoveWithWallCheck(Vector2 input)
     {
-        if (input.sqrMagnitude <= 0f) return;
+        if (input.sqrMagnitude <= 0f) return 0f;
+
+        Vector3 before = transform.position;
 
         Vector2 current = transform.position;
         Vector2 delta = input * (moveSpeed * Time.deltaTime);
         if (!Physics2D.CircleCast(current, radius, delta.normalized, delta.magnitude, wallMask))
         {
             transform.position = current + delta;
-            return;
+            return Vector3.Distance(before, transform.position);
         }
 
         Vector2 xDelta = new Vector2(delta.x, 0f);
@@ -65,6 +73,8 @@ public class Player : MonoBehaviour
         if (Mathf.Abs(yDelta.y) > 0.001f &&
             !Physics2D.CircleCast(transform.position, radius, yDelta.normalized, Mathf.Abs(yDelta.y), wallMask))
             transform.position += (Vector3)yDelta;
+
+        return Vector3.Distance(before, transform.position);
     }
 
     void UpdateTint()
@@ -87,6 +97,7 @@ public class Player : MonoBehaviour
     {
         transform.position = startPosition;
         invulnerabilityTimer = 0f;
+        footstepTimer = 0f;
         if (sr != null) sr.color = baseColor;
     }
 
@@ -118,14 +129,107 @@ public class Player : MonoBehaviour
 
         invulnerabilityTimer = invulnerabilitySeconds;
         Play(hitClip, 0.7f);
+        CameraShake.Pulse(0.25f, 0.2f);
         GameManager.I.PlayerHit();
 
         Vector3 away = (transform.position - source).normalized;
-        transform.position += away * 0.35f;
+        TryApplyKnockback(away * 0.35f);
     }
 
     void Play(AudioClip clip, float volume)
     {
         if (clip != null) audioSrc.PlayOneShot(clip, volume);
+    }
+
+    void EmitFootsteps(float movedDistance)
+    {
+        if (movedDistance <= footstepSpeedThreshold * Time.deltaTime) return;
+
+        footstepTimer -= Time.deltaTime;
+        if (footstepTimer > 0f) return;
+
+        footstepTimer = footstepSpawnInterval;
+        GameObject puff = new GameObject("FootstepPuff");
+        puff.transform.position = transform.position + (Vector3)(Random.insideUnitCircle * 0.12f);
+        SpriteRenderer puffSr = puff.AddComponent<SpriteRenderer>();
+        puffSr.sprite = Art2D.SolidCircle(new Color(1f, 1f, 1f, 0.8f), 16);
+        puffSr.sortingOrder = 1;
+        puff.transform.localScale = Vector3.one * Random.Range(0.12f, 0.2f);
+        FootstepPuff effect = puff.AddComponent<FootstepPuff>();
+        effect.drift = Random.insideUnitCircle * 0.25f;
+    }
+
+    void TryApplyKnockback(Vector3 delta)
+    {
+        Vector3 original = transform.position;
+        Vector3 full = original + delta;
+        if (!IsBlocked(full))
+        {
+            transform.position = full;
+            return;
+        }
+
+        Vector3 half = original + delta * 0.5f;
+        if (!IsBlocked(half))
+        {
+            transform.position = half;
+            return;
+        }
+
+        // If both push attempts clip into a wall, keep current position.
+    }
+
+    bool IsBlocked(Vector3 worldPos)
+    {
+        return Physics2D.OverlapCircle(worldPos, radius * 0.95f, wallMask) != null;
+    }
+
+    void TryUnstuckFromWalls()
+    {
+        if (!IsBlocked(transform.position)) return;
+
+        Vector3 origin = transform.position;
+        for (int ring = 1; ring <= 6; ring++)
+        {
+            float distance = ring * 0.08f;
+            for (int i = 0; i < 16; i++)
+            {
+                float angle = (Mathf.PI * 2f / 16f) * i;
+                Vector3 candidate = origin + new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0f) * distance;
+                if (!IsBlocked(candidate))
+                {
+                    transform.position = candidate;
+                    return;
+                }
+            }
+        }
+    }
+}
+
+public class FootstepPuff : MonoBehaviour
+{
+    public Vector2 drift;
+    public float life = 0.25f;
+    float t;
+    SpriteRenderer sr;
+
+    void Start()
+    {
+        sr = GetComponent<SpriteRenderer>();
+    }
+
+    void Update()
+    {
+        t += Time.deltaTime;
+        transform.position += (Vector3)(drift * Time.deltaTime);
+        transform.localScale *= 0.98f;
+        if (sr != null)
+        {
+            Color c = sr.color;
+            c.a = Mathf.Clamp01(1f - (t / life));
+            sr.color = c;
+        }
+
+        if (t >= life) Destroy(gameObject);
     }
 }
