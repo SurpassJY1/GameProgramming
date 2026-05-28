@@ -6,6 +6,10 @@ using UnityEngine.EventSystems;
 public class GameBootstrap : MonoBehaviour
 {
     const int WallLayer = 8;
+    const string PlayerSpritePath = "thirdparty/topdown-shooter/player.png";
+    const string EnemySpritePath = "thirdparty/topdown-shooter/enemy.png";
+    const string WallSpritePath = "thirdparty/topdown-shooter/wall_tile.png";
+    const float TilePixelsPerUnit = 64f;
 
     void Awake()
     {
@@ -39,6 +43,8 @@ public class GameBootstrap : MonoBehaviour
         cam.backgroundColor = new Color(0.05f, 0.06f, 0.08f);
         cam.clearFlags = CameraClearFlags.SolidColor;
         if (cam.GetComponent<AudioSource>() == null) cam.gameObject.AddComponent<AudioSource>().playOnAwake = false;
+        if (cam.GetComponent<CameraShake>() == null) cam.gameObject.AddComponent<CameraShake>();
+        if (cam.GetComponent<SmoothCameraFollow>() == null) cam.gameObject.AddComponent<SmoothCameraFollow>();
     }
 
     void BuildGameManager()
@@ -49,42 +55,92 @@ public class GameBootstrap : MonoBehaviour
 
     void BuildDungeon()
     {
-        GameObject floor = new GameObject("Dungeon Floor");
-        floor.transform.position = Vector3.zero;
-        floor.transform.localScale = new Vector3(14f, 9f, 1f);
-        SpriteRenderer floorSr = floor.AddComponent<SpriteRenderer>();
-        floorSr.sprite = Art2D.Square(new Color(0.13f, 0.13f, 0.16f));
-        floorSr.sortingOrder = -5;
+        // Keep floor clean so walkable space is easy to read.
+        Sprite floorSprite = Art2D.Square(new Color(0.13f, 0.13f, 0.16f), 100);
+        Sprite wallSprite = Art2D.FromPngFile(WallSpritePath, TilePixelsPerUnit) ?? Art2D.Square(new Color(0.75f, 0.75f, 0.75f));
+        BuildTiledFloor(floorSprite);
 
-        BuildWall("North Wall", new Vector2(0f, 4.5f), new Vector2(14f, 0.5f));
-        BuildWall("South Wall", new Vector2(0f, -4.5f), new Vector2(14f, 0.5f));
-        BuildWall("West Wall", new Vector2(-7f, 0f), new Vector2(0.5f, 9f));
-        BuildWall("East Wall", new Vector2(7f, 0f), new Vector2(0.5f, 9f));
-        BuildWall("Left Chamber Divider", new Vector2(-2.2f, 1.4f), new Vector2(0.45f, 4.4f));
-        BuildWall("Right Chamber Divider", new Vector2(2.2f, -1.4f), new Vector2(0.45f, 4.4f));
-        BuildWall("Upper Block", new Vector2(3.9f, 1.7f), new Vector2(2.2f, 0.45f));
-        BuildWall("Lower Block", new Vector2(-3.9f, -1.7f), new Vector2(2.2f, 0.45f));
+        // Perimeter walls.
+        BuildWall("North Wall", new Vector2(0f, 4.5f), new Vector2(14f, 0.5f), wallSprite);
+        BuildWall("South Wall", new Vector2(0f, -4.5f), new Vector2(14f, 0.5f), wallSprite);
+        BuildWall("West Wall", new Vector2(-7f, 0f), new Vector2(0.5f, 9f), wallSprite);
+        BuildWall("East Wall", new Vector2(7f, 0f), new Vector2(0.5f, 9f), wallSprite);
+
+        // Core corridors.
+        BuildWall("Left Chamber Divider", new Vector2(-2.2f, 1.2f), new Vector2(0.5f, 4.0f), wallSprite);
+        BuildWall("Right Chamber Divider", new Vector2(2.2f, -1.2f), new Vector2(0.5f, 4.0f), wallSprite);
+        BuildWall("Upper Block", new Vector2(3.8f, 1.9f), new Vector2(2.4f, 0.5f), wallSprite);
+        BuildWall("Lower Block", new Vector2(-3.8f, -1.9f), new Vector2(2.4f, 0.5f), wallSprite);
+
+        // Added complexity: extra islands and choke points.
+        BuildWall("Center Pillar A", new Vector2(-0.3f, 0.4f), new Vector2(1.0f, 1.0f), wallSprite);
+        BuildWall("Center Pillar B", new Vector2(0.9f, -0.9f), new Vector2(1.0f, 1.0f), wallSprite);
+        BuildWall("Top Left Block", new Vector2(-5.2f, 2.8f), new Vector2(1.4f, 0.5f), wallSprite);
+        BuildWall("Top Right Block", new Vector2(4.9f, 3.0f), new Vector2(1.8f, 0.5f), wallSprite);
+        BuildWall("Bottom Right Block", new Vector2(4.8f, -2.8f), new Vector2(1.8f, 0.5f), wallSprite);
+        BuildWall("Bottom Left Block", new Vector2(-5.0f, -2.6f), new Vector2(1.6f, 0.5f), wallSprite);
+        BuildWall("Mid Bridge A", new Vector2(-4.2f, 0.2f), new Vector2(0.5f, 1.8f), wallSprite);
+        BuildWall("Mid Bridge B", new Vector2(4.1f, -0.1f), new Vector2(0.5f, 1.8f), wallSprite);
     }
 
-    void BuildWall(string name, Vector2 pos, Vector2 size)
+    void BuildTiledFloor(Sprite floorSprite)
+    {
+        GameObject root = new GameObject("Dungeon Floor");
+        for (int x = -6; x <= 6; x++)
+        {
+            for (int y = -4; y <= 4; y++)
+            {
+                GameObject tile = new GameObject("FloorTile");
+                tile.transform.SetParent(root.transform);
+                tile.transform.position = new Vector3(x + 0.5f, y + 0.5f, 0f);
+                SpriteRenderer sr = tile.AddComponent<SpriteRenderer>();
+                sr.sprite = floorSprite;
+                sr.sortingOrder = -5;
+                tile.transform.localScale = Vector3.one;
+            }
+        }
+    }
+
+    void BuildWall(string name, Vector2 pos, Vector2 size, Sprite wallSprite)
     {
         GameObject wall = new GameObject(name);
         wall.layer = WallLayer;
         wall.transform.position = pos;
-        wall.transform.localScale = new Vector3(size.x, size.y, 1f);
-        SpriteRenderer sr = wall.AddComponent<SpriteRenderer>();
-        sr.sprite = Art2D.Square(new Color(0.32f, 0.34f, 0.42f));
-        sr.sortingOrder = -1;
-        wall.AddComponent<BoxCollider2D>().size = Vector2.one;
+        BoxCollider2D collider = wall.AddComponent<BoxCollider2D>();
+        collider.size = size;
+
+        // Build wall visuals from tiled sprites so walls stay crisp and readable.
+        int xTiles = Mathf.Max(1, Mathf.CeilToInt(size.x));
+        int yTiles = Mathf.Max(1, Mathf.CeilToInt(size.y));
+        float tileWidth = size.x / xTiles;
+        float tileHeight = size.y / yTiles;
+        float originX = -size.x * 0.5f + tileWidth * 0.5f;
+        float originY = -size.y * 0.5f + tileHeight * 0.5f;
+
+        for (int x = 0; x < xTiles; x++)
+        {
+            for (int y = 0; y < yTiles; y++)
+            {
+                GameObject tile = new GameObject("WallTile");
+                tile.transform.SetParent(wall.transform);
+                tile.transform.localPosition = new Vector3(originX + x * tileWidth, originY + y * tileHeight, 0f);
+                tile.transform.localScale = new Vector3(tileWidth, tileHeight, 1f);
+                SpriteRenderer sr = tile.AddComponent<SpriteRenderer>();
+                sr.sprite = wallSprite;
+                sr.sortingOrder = -1;
+                sr.color = Color.white;
+            }
+        }
     }
 
     GameObject BuildPlayer()
     {
         GameObject go = new GameObject("Player");
         go.transform.position = new Vector3(-5.6f, -3.2f, 0f);
-        go.transform.localScale = Vector3.one * 0.75f;
+        go.transform.localScale = Vector3.one * 0.9f;
         SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
-        sr.sprite = Art2D.SolidCircle(new Color(0.45f, 0.95f, 0.55f));
+        sr.sprite = Art2D.FromPngFile(PlayerSpritePath, 100f)
+            ?? Art2D.SolidCircle(new Color(0.45f, 0.95f, 0.55f));
         sr.sortingOrder = 3;
         CircleCollider2D col = go.AddComponent<CircleCollider2D>();
         col.isTrigger = true;
@@ -97,6 +153,9 @@ public class GameBootstrap : MonoBehaviour
         player.keyClip = Art2D.Chime(660f, 0.35f);
         player.hitClip = Art2D.Noise(0.25f, 12f);
         player.winClip = Art2D.Chime(880f, 0.6f);
+
+        SmoothCameraFollow follow = Camera.main != null ? Camera.main.GetComponent<SmoothCameraFollow>() : null;
+        if (follow != null) follow.target = go.transform;
         return go;
     }
 
@@ -132,9 +191,10 @@ public class GameBootstrap : MonoBehaviour
     {
         GameObject enemy = new GameObject(name);
         enemy.transform.position = a;
-        enemy.transform.localScale = Vector3.one * 0.65f;
+        enemy.transform.localScale = Vector3.one * 0.9f;
         SpriteRenderer sr = enemy.AddComponent<SpriteRenderer>();
-        sr.sprite = Art2D.Diamond(new Color(0.92f, 0.25f, 0.25f));
+        sr.sprite = Art2D.FromPngFile(EnemySpritePath, 100f)
+            ?? Art2D.Diamond(new Color(0.92f, 0.25f, 0.25f));
         sr.sortingOrder = 2;
         CircleCollider2D col = enemy.AddComponent<CircleCollider2D>();
         col.isTrigger = true;
@@ -171,7 +231,7 @@ public class GameBootstrap : MonoBehaviour
             "Move: WASD or arrow keys\nPause: ESC\n\nGoal: collect the gold key, then reach the blue exit door.\nAvoid red guards. They patrol and chase if you get too close.",
             menus.OnBackToMenu);
         menus.creditsPage = BuildInfoPage(cv.transform, "Credits",
-            "Code, sprites and sound effects are original for this module project.\nVisuals and audio are generated at runtime in Art2D.cs.\nNo third-party asset packs are used.",
+            "Code and gameplay logic are original for this module project.\nAudio and fallback visuals are generated in Art2D.cs.\nPlayer and guard sprites use free CC0 assets credited in README.",
             menus.OnBackToMenu);
         menus.pausePage = BuildPausePage(cv.transform, menus);
         menus.winPage = BuildEndPage(cv.transform, menus, "ESCAPED", new Color(0.45f, 1f, 0.65f), out menus.winText);

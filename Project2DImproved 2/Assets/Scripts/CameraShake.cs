@@ -4,18 +4,25 @@ using UnityEngine;
 public class CameraShake : MonoBehaviour
 {
     static CameraShake instance;
-    Vector3 home;
     float amount;
     float remaining;
+    public Vector3 CurrentOffset { get; private set; }
 
-    void Awake() { instance = this; home = transform.localPosition; }
+    void Awake() { instance = this; }
 
     void LateUpdate()
     {
-        if (remaining <= 0f) { transform.localPosition = home; return; }
+        if (remaining <= 0f)
+        {
+            CurrentOffset = Vector3.zero;
+            amount = 0f;
+            return;
+        }
+
         remaining -= Time.unscaledDeltaTime;
-        Vector2 jitter = Random.insideUnitCircle * amount;
-        transform.localPosition = home + new Vector3(jitter.x, jitter.y, 0f);
+        float normalizedLife = Mathf.Clamp01(remaining / Mathf.Max(0.001f, remaining + Time.unscaledDeltaTime));
+        Vector2 jitter = Random.insideUnitCircle * amount * normalizedLife;
+        CurrentOffset = new Vector3(jitter.x, jitter.y, 0f);
     }
 
     public static void Pulse(float strength, float duration)
@@ -23,5 +30,10 @@ public class CameraShake : MonoBehaviour
         if (instance == null) return;
         instance.amount = Mathf.Max(instance.amount, strength);
         instance.remaining = Mathf.Max(instance.remaining, duration);
+    }
+
+    public static Vector3 Offset()
+    {
+        return instance != null ? instance.CurrentOffset : Vector3.zero;
     }
 }
