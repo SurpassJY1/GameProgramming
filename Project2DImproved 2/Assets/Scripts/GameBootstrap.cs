@@ -162,8 +162,7 @@ public class GameBootstrap : MonoBehaviour
     void BuildKey()
     {
         GameObject key = new GameObject("Gold Key");
-        Vector2 safePos = ResolveFreeCirclePosition(new Vector2(5.4f, 3.1f), 0.3f);
-        key.transform.position = new Vector3(safePos.x, safePos.y, 0f);
+        key.transform.position = new Vector3(5.4f, 3.1f, 0f);
         key.transform.localScale = Vector3.one * 0.45f;
         SpriteRenderer sr = key.AddComponent<SpriteRenderer>();
         sr.sprite = Art2D.Diamond(new Color(1f, 0.78f, 0.16f));
@@ -177,8 +176,7 @@ public class GameBootstrap : MonoBehaviour
     void BuildExit()
     {
         GameObject exit = new GameObject("Exit Door");
-        Vector2 safePos = ResolveFreeBoxPosition(new Vector2(5.7f, -3.2f), new Vector2(0.9f, 1.2f));
-        exit.transform.position = new Vector3(safePos.x, safePos.y, 0f);
+        exit.transform.position = new Vector3(5.7f, -3.2f, 0f);
         exit.transform.localScale = new Vector3(0.9f, 1.2f, 1f);
         SpriteRenderer sr = exit.AddComponent<SpriteRenderer>();
         sr.sprite = Art2D.Square(new Color(0.25f, 0.35f, 0.55f));
@@ -191,11 +189,6 @@ public class GameBootstrap : MonoBehaviour
 
     void BuildEnemy(string name, Transform player, Vector3 a, Vector3 b)
     {
-        Vector2 safeA = ResolveFreeCirclePosition(new Vector2(a.x, a.y), 0.38f);
-        Vector2 safeB = ResolveFreeCirclePosition(new Vector2(b.x, b.y), 0.38f);
-        a = new Vector3(safeA.x, safeA.y, 0f);
-        b = new Vector3(safeB.x, safeB.y, 0f);
-
         GameObject enemy = new GameObject(name);
         enemy.transform.position = a;
         enemy.transform.localScale = Vector3.one * 0.9f;
@@ -214,44 +207,6 @@ public class GameBootstrap : MonoBehaviour
         guard.pointA = a;
         guard.pointB = b;
         guard.wallMask = 1 << WallLayer;
-    }
-
-    Vector2 ResolveFreeCirclePosition(Vector2 desired, float radius)
-    {
-        int mask = 1 << WallLayer;
-        if (Physics2D.OverlapCircle(desired, radius, mask) == null) return desired;
-
-        for (int ring = 1; ring <= 10; ring++)
-        {
-            float distance = ring * 0.2f;
-            for (int i = 0; i < 24; i++)
-            {
-                float angle = (Mathf.PI * 2f / 24f) * i;
-                Vector2 candidate = desired + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * distance;
-                if (Physics2D.OverlapCircle(candidate, radius, mask) == null) return candidate;
-            }
-        }
-
-        return desired;
-    }
-
-    Vector2 ResolveFreeBoxPosition(Vector2 desired, Vector2 size)
-    {
-        int mask = 1 << WallLayer;
-        if (Physics2D.OverlapBox(desired, size, 0f, mask) == null) return desired;
-
-        for (int ring = 1; ring <= 10; ring++)
-        {
-            float distance = ring * 0.2f;
-            for (int i = 0; i < 24; i++)
-            {
-                float angle = (Mathf.PI * 2f / 24f) * i;
-                Vector2 candidate = desired + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * distance;
-                if (Physics2D.OverlapBox(candidate, size, 0f, mask) == null) return candidate;
-            }
-        }
-
-        return desired;
     }
 
     void BuildHUD()
