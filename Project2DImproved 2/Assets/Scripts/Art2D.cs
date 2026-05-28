@@ -1,8 +1,22 @@
+using System.IO;
 using UnityEngine;
 
 /// Procedural sprite and audio helpers so the project ships zero binary assets.
 public static class Art2D
 {
+    public static Sprite FromPngFile(string relativePath, float pixelsPerUnit = 100f, FilterMode filter = FilterMode.Point)
+    {
+        string fullPath = Path.Combine(Application.streamingAssetsPath, relativePath);
+        if (!File.Exists(fullPath)) return null;
+
+        byte[] pngBytes = File.ReadAllBytes(fullPath);
+        Texture2D tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+        if (!tex.LoadImage(pngBytes)) return null;
+        tex.filterMode = filter;
+        return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height),
+            new Vector2(0.5f, 0.5f), pixelsPerUnit);
+    }
+
     public static Sprite SolidCircle(Color color, int size = 64)
     {
         var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);

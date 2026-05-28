@@ -11,13 +11,22 @@ All gameplay code was written for this module project. No third-party C# gamepla
 
 ## Art
 
-All sprites are generated procedurally in `Assets/Scripts/Art2D.cs`:
+Most visuals are generated procedurally in `Assets/Scripts/Art2D.cs`:
 
-- `SolidCircle` for the player and simple round shapes
-- `Diamond` for the key and guard shapes
+- `SolidCircle` for particle/fallback shapes
+- `Diamond` for key and fallback guard shape
 - `Square` for walls, floor, and exit door
 
-No external images, sprite sheets, textures, or Asset Store art packages are used.
+Third-party sprites are used for player, guard, and wall visuals:
+
+- Source: `Topdown Shooter` by Kenney on OpenGameArt
+- URL: `https://opengameart.org/content/topdown-shooter`
+- License note on source page: credit is optional; this project includes explicit credit for academic transparency
+- Files used in this project:
+  - `Assets/StreamingAssets/thirdparty/topdown-shooter/player.png`
+  - `Assets/StreamingAssets/thirdparty/topdown-shooter/enemy.png`
+  - `Assets/StreamingAssets/thirdparty/topdown-shooter/wall_tile.png`
+  - Wall texture source trace: `.tmp_assets/topdown-shooter/PNG/Tiles/tile_74.png` (same image content)
 
 ## Audio
 
@@ -41,4 +50,4 @@ The UI uses Unity's built-in `LegacyRuntime.ttf`, loaded through `Resources.GetB
 
 ## Notes
 
-The project avoids third-party assets to keep licensing simple and to demonstrate original programming and design work.
+Third-party assets are limited to clearly documented free sprites with source and license notes in both this file and `README.md`.
