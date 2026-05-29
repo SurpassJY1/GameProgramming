@@ -262,6 +262,49 @@ public class GameManager : MonoBehaviour
         return Mathf.Max(1, Mathf.RoundToInt(scaled) + flatBonus);
     }
 
+    public string GetWeaponUpgradeDisplayName(WeaponUpgradeKind upgrade)
+    {
+        return UpgradeDisplayName(upgrade);
+    }
+
+    public string GetWeaponUpgradeDescription(WeaponUpgradeKind upgrade)
+    {
+        switch (upgrade)
+        {
+            case WeaponUpgradeKind.ExtraProjectile:
+                return "Adds more shots to each volley.";
+            case WeaponUpgradeKind.RapidFire:
+                return "Reduces time between shots.";
+            case WeaponUpgradeKind.DamageUp:
+                return "Increases bullet damage.";
+            case WeaponUpgradeKind.PiercingShot:
+                return "Bullets pass through more enemies.";
+            case WeaponUpgradeKind.BurnShot:
+                return "Hits apply damage over time.";
+            case WeaponUpgradeKind.SlowShot:
+                return "Hits briefly slow enemies.";
+            case WeaponUpgradeKind.ExplosiveShot:
+                return "Hits damage nearby enemies.";
+            default:
+                return "Improves your weapon.";
+        }
+    }
+
+    public int GetWeaponUpgradeLevel(WeaponUpgradeKind upgrade)
+    {
+        switch (upgrade)
+        {
+            case WeaponUpgradeKind.ExtraProjectile: return extraProjectileLevel;
+            case WeaponUpgradeKind.RapidFire: return rapidFireLevel;
+            case WeaponUpgradeKind.DamageUp: return damageUpLevel;
+            case WeaponUpgradeKind.PiercingShot: return piercingShotLevel;
+            case WeaponUpgradeKind.BurnShot: return burnShotLevel;
+            case WeaponUpgradeKind.SlowShot: return slowShotLevel;
+            case WeaponUpgradeKind.ExplosiveShot: return explosiveShotLevel;
+            default: return 0;
+        }
+    }
+
     string UpgradeDisplayName(WeaponUpgradeKind upgrade)
     {
         switch (upgrade)
