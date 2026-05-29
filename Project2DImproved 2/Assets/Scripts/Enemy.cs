@@ -10,27 +10,55 @@ public class Enemy : MonoBehaviour
     public float chaseSpeed = 3.0f;
     public float chaseRange = 3.0f;
     public float collisionRadius = 0.32f;
+    public float alertSecondsAfterHit = 4.0f;
+    public float knockbackDistance = 0.22f;
     public int maxHealth = 3;
     public int currentHealth;
     public LayerMask wallMask;
 
+    Vector3 startPosition;
     Vector3 target;
     SpriteRenderer sr;
     Color baseColor;
     float hitFlashTimer;
+    float alertTimer;
+    bool dead;
 
-    void Start()
+    void Awake()
     {
-        target = pointB;
-        currentHealth = maxHealth;
+        startPosition = transform.position;
         sr = GetComponent<SpriteRenderer>();
         if (sr != null) baseColor = sr.color;
     }
 
+    void Start()
+    {
+        if (GameManager.I != null) GameManager.I.OnGameStarted += ResetForNewRun;
+        ResetForNewRun();
+    }
+
+    void OnDestroy()
+    {
+        if (GameManager.I != null) GameManager.I.OnGameStarted -= ResetForNewRun;
+    }
+
+    void ResetForNewRun()
+    {
+        dead = false;
+        alertTimer = 0f;
+        hitFlashTimer = 0f;
+        target = pointB;
+        currentHealth = maxHealth;
+        transform.position = startPosition;
+        gameObject.SetActive(true);
+        if (sr != null) sr.color = baseColor;
+    }
+
     void Update()
     {
-        if (GameManager.I == null || GameManager.I.phase != GameManager.Phase.Playing) return;
+        if (dead || GameManager.I == null || GameManager.I.phase != GameManager.Phase.Playing) return;
 
+        if (alertTimer > 0f) alertTimer -= Time.deltaTime;
         bool chasing = ShouldChase();
         Vector3 destination = chasing ? player.position : target;
         float speed = chasing ? chaseSpeed : patrolSpeed;
@@ -45,6 +73,7 @@ public class Enemy : MonoBehaviour
     bool ShouldChase()
     {
         if (player == null) return false;
+        if (alertTimer > 0f) return true;
 
         Vector2 toPlayer = player.position - transform.position;
         if (toPlayer.magnitude > chaseRange) return false;
@@ -59,17 +88,20 @@ public class Enemy : MonoBehaviour
 
     public void TakeDamage(int damage, Vector3 hitSource)
     {
-        if (GameManager.I == null || GameManager.I.phase != GameManager.Phase.Playing) return;
+        if (dead || GameManager.I == null || GameManager.I.phase != GameManager.Phase.Playing) return;
 
         currentHealth = Mathf.Max(0, currentHealth - Mathf.Max(1, damage));
+        alertTimer = alertSecondsAfterHit;
         hitFlashTimer = 0.12f;
+        TryApplyKnockback((transform.position - hitSource).normalized * knockbackDistance);
 
         if (currentHealth <= 0) Die();
     }
 
     public void Die()
     {
-        Destroy(gameObject);
+        dead = true;
+        gameObject.SetActive(false);
     }
 
     void UpdateHitFlash()
@@ -78,6 +110,15 @@ public class Enemy : MonoBehaviour
 
         hitFlashTimer -= Time.deltaTime;
         sr.color = hitFlashTimer > 0f ? Color.white : baseColor;
+    }
+
+    void TryApplyKnockback(Vector3 delta)
+    {
+        if (delta.sqrMagnitude <= 0.0001f) return;
+
+        Vector3 destination = transform.position + delta;
+        if (!Physics2D.CircleCast(transform.position, collisionRadius, delta.normalized, delta.magnitude, wallMask))
+            transform.position = destination;
     }
 
     void MoveWithWallCheck(Vector3 destination, float speed)
