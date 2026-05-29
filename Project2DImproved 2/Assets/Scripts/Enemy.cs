@@ -14,6 +14,7 @@ public class Enemy : MonoBehaviour
     public float knockbackDistance = 0.22f;
     public int maxHealth = 3;
     public int currentHealth;
+    public int xpReward = 10;
     public LayerMask wallMask;
 
     Vector3 startPosition;
@@ -100,7 +101,10 @@ public class Enemy : MonoBehaviour
 
     public void Die()
     {
+        if (dead) return;
+
         dead = true;
+        if (GameManager.I != null) GameManager.I.RegisterEnemyDefeated(xpReward);
         gameObject.SetActive(false);
     }
 

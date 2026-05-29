@@ -291,9 +291,39 @@ public class GameBootstrap : MonoBehaviour
         hud.root = cv.gameObject;
         hud.livesText = MakeText(cv.transform, "Lives: 3", new Vector2(20, -20), new Vector2(0, 1), 30, TextAnchor.UpperLeft, Color.white);
         hud.keyText = MakeText(cv.transform, "Key: Missing", new Vector2(20, -60), new Vector2(0, 1), 26, TextAnchor.UpperLeft, new Color(1f, 0.9f, 0.45f));
+        hud.levelText = MakeText(cv.transform, "Level: 1", new Vector2(20, -100), new Vector2(0, 1), 26, TextAnchor.UpperLeft, new Color(0.72f, 0.95f, 1f));
+        hud.xpText = MakeText(cv.transform, "XP: 0 / 20", new Vector2(20, -136), new Vector2(0, 1), 22, TextAnchor.UpperLeft, new Color(0.82f, 0.9f, 1f));
+        hud.xpBarFill = MakeHudBar(cv.transform, new Vector2(20, -170), new Vector2(280, 16), new Color(0.05f, 0.08f, 0.11f, 0.82f), new Color(0.35f, 0.85f, 1f, 0.95f));
+        hud.weaponText = MakeText(cv.transform, "Weapon: Basic Shot", new Vector2(20, -202), new Vector2(0, 1), 20, TextAnchor.UpperLeft, new Color(1f, 0.86f, 0.42f));
+        hud.weaponText.GetComponent<RectTransform>().sizeDelta = new Vector2(520, 100);
         hud.timerText = MakeText(cv.transform, "Time: 0s", new Vector2(-20, -20), new Vector2(1, 1), 28, TextAnchor.UpperRight, Color.white);
         hud.objectiveText = MakeText(cv.transform, "", new Vector2(0, 30), new Vector2(0.5f, 0), 24, TextAnchor.LowerCenter, new Color(0.85f, 0.9f, 1f));
         MakeText(cv.transform, "ESC = pause", new Vector2(-20, 30), new Vector2(1, 0), 18, TextAnchor.LowerRight, new Color(1, 1, 1, 0.55f));
+    }
+
+    Image MakeHudBar(Transform parent, Vector2 pos, Vector2 size, Color backgroundColor, Color fillColor)
+    {
+        GameObject background = new GameObject("XPBar");
+        background.transform.SetParent(parent, false);
+        RectTransform bgRt = background.AddComponent<RectTransform>();
+        bgRt.anchorMin = bgRt.anchorMax = bgRt.pivot = new Vector2(0, 1);
+        bgRt.anchoredPosition = pos;
+        bgRt.sizeDelta = size;
+        background.AddComponent<Image>().color = backgroundColor;
+
+        GameObject fill = new GameObject("Fill");
+        fill.transform.SetParent(background.transform, false);
+        RectTransform fillRt = fill.AddComponent<RectTransform>();
+        fillRt.anchorMin = Vector2.zero;
+        fillRt.anchorMax = Vector2.one;
+        fillRt.offsetMin = fillRt.offsetMax = Vector2.zero;
+        Image fillImage = fill.AddComponent<Image>();
+        fillImage.color = fillColor;
+        fillImage.type = Image.Type.Filled;
+        fillImage.fillMethod = Image.FillMethod.Horizontal;
+        fillImage.fillOrigin = 0;
+        fillImage.fillAmount = 0f;
+        return fillImage;
     }
 
     void BuildMenusCanvas()
