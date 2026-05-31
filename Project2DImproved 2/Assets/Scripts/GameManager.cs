@@ -34,6 +34,8 @@ public class GameManager : MonoBehaviour
     public int slowShotLevel;
     public int explosiveShotLevel;
 
+    PlayerCombat playerCombat;
+
     public event Action OnStateChanged;
     public event Action OnGameStarted;
     public event Action OnRunEnded;
@@ -158,6 +160,7 @@ public class GameManager : MonoBehaviour
         if (phase != Phase.LevelUp) return;
 
         RegisterWeaponUpgrade(upgrade);
+        ApplyWeaponUpgrade(upgrade);
         objective = "Weapon upgrade chosen: " + UpgradeDisplayName(upgrade) + ". Keep pushing deeper.";
 
         if (currentXP >= xpToNextLevel)
@@ -231,6 +234,7 @@ public class GameManager : MonoBehaviour
         burnShotLevel = 0;
         slowShotLevel = 0;
         explosiveShotLevel = 0;
+        playerCombat = null;
     }
 
     void BeginLevelUp()
@@ -346,6 +350,20 @@ public class GameManager : MonoBehaviour
                 explosiveShotLevel++;
                 break;
         }
+    }
+
+    void ApplyWeaponUpgrade(WeaponUpgradeKind upgrade)
+    {
+        PlayerCombat combat = GetPlayerCombat();
+        if (combat != null) combat.ApplyUpgrade(upgrade);
+    }
+
+    PlayerCombat GetPlayerCombat()
+    {
+        if (playerCombat != null) return playerCombat;
+
+        playerCombat = FindFirstObjectByType<PlayerCombat>();
+        return playerCombat;
     }
 
     string AppendUpgradeSummary(string summary, string label, int level)
