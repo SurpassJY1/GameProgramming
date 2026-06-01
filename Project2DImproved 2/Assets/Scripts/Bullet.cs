@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// Combat projectile that moves forward, damages enemies, and stops at walls.
@@ -8,8 +9,16 @@ public class Bullet : MonoBehaviour
     public float lifetime = 1.5f;
     public float radius = 0.08f;
     public LayerMask wallMask;
+    public int pierceRemaining;
+    public int burnDamage;
+    public float burnDuration;
+    public float slowMultiplier = 1f;
+    public float slowDuration;
+    public float explosionRadius;
+    public int explosionDamage;
 
     float born;
+    readonly List<Enemy> hitEnemies = new List<Enemy>();
 
     void Start() { born = Time.time; }
 
@@ -17,7 +26,7 @@ public class Bullet : MonoBehaviour
     {
         if (Time.time - born >= lifetime)
         {
-            Destroy(gameObject);
+            HitAndDestroy(transform.position);
             return;
         }
 
@@ -40,8 +49,7 @@ public class Bullet : MonoBehaviour
         if (enemyHit.collider != null)
         {
             Enemy enemy = enemyHit.collider.GetComponent<Enemy>();
-            enemy.TakeDamage(damage, transform.position);
-            HitAndDestroy(enemyHit.point);
+            HitEnemy(enemy, enemyHit.point, direction);
             return;
         }
 
@@ -57,6 +65,7 @@ public class Bullet : MonoBehaviour
         for (int i = 0; i < hits.Length; i++)
         {
             Enemy enemy = hits[i].collider != null ? hits[i].collider.GetComponent<Enemy>() : null;
+            if (enemy != null && hitEnemies.Contains(enemy)) continue;
             if (enemy == null || hits[i].distance >= bestDistance) continue;
 
             bestHit = hits[i];
@@ -69,10 +78,9 @@ public class Bullet : MonoBehaviour
     void OnTriggerEnter2D(Collider2D other)
     {
         Enemy enemy = other.GetComponent<Enemy>();
-        if (enemy != null)
+        if (enemy != null && !hitEnemies.Contains(enemy))
         {
-            enemy.TakeDamage(damage, transform.position);
-            HitAndDestroy(transform.position);
+            HitEnemy(enemy, transform.position, transform.up);
             return;
         }
 
@@ -82,8 +90,63 @@ public class Bullet : MonoBehaviour
 
     void HitAndDestroy(Vector3 position)
     {
+        Explode(position);
         SpawnImpact(position);
         Destroy(gameObject);
+    }
+
+    void HitEnemy(Enemy enemy, Vector3 hitPoint, Vector2 direction)
+    {
+        if (enemy == null || hitEnemies.Contains(enemy)) return;
+
+        hitEnemies.Add(enemy);
+        enemy.TakeDamage(damage, transform.position);
+
+        if (burnDamage > 0 && burnDuration > 0f) enemy.ApplyBurn(burnDamage, burnDuration);
+        if (slowDuration > 0f) enemy.ApplySlow(slowMultiplier, slowDuration);
+
+        Explode(hitPoint);
+        SpawnImpact(hitPoint);
+
+        if (pierceRemaining > 0)
+        {
+            pierceRemaining--;
+            transform.position = hitPoint + (Vector3)(direction.normalized * (radius + 0.04f));
+            return;
+        }
+
+        Destroy(gameObject);
+    }
+
+    void Explode(Vector3 position)
+    {
+        if (explosionRadius <= 0f || explosionDamage <= 0) return;
+
+        Collider2D[] hits = Physics2D.OverlapCircleAll(position, explosionRadius);
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Enemy enemy = hits[i].GetComponent<Enemy>();
+            if (enemy == null) continue;
+
+            enemy.TakeDamage(explosionDamage, position);
+        }
+
+        SpawnExplosion(position);
+    }
+
+    void SpawnExplosion(Vector3 position)
+    {
+        GameObject explosion = new GameObject("BulletExplosion");
+        explosion.transform.position = position;
+        explosion.transform.localScale = Vector3.one * Mathf.Max(0.2f, explosionRadius * 2f);
+
+        SpriteRenderer sr = explosion.AddComponent<SpriteRenderer>();
+        sr.sprite = Art2D.SolidCircle(new Color(1f, 0.42f, 0.12f, 0.42f), 32);
+        sr.sortingOrder = 4;
+
+        BulletImpact effect = explosion.AddComponent<BulletImpact>();
+        effect.life = 0.22f;
+        effect.drift = Vector2.zero;
     }
 
     void SpawnImpact(Vector3 position)
