@@ -49,8 +49,9 @@ public class Menus : MonoBehaviour
     {
         GameManager gm = GameManager.I;
         string time = Mathf.FloorToInt(gm.elapsed) + " seconds";
-        if (winText != null) winText.text = "You escaped in " + time + ".";
-        if (gameOverText != null) gameOverText.text = "The guards caught you after " + time + ".";
+        if (winText != null) winText.text = "Run complete in " + time + ".";
+        if (gameOverText != null)
+            gameOverText.text = "Run ended on floor " + gm.currentFloor + " after " + time + ". Enemies defeated: " + gm.enemiesDefeated + ".";
     }
 
     public void Click()

@@ -39,13 +39,21 @@ public class Enemy : MonoBehaviour
 
     void Start()
     {
-        if (GameManager.I != null) GameManager.I.OnGameStarted += ResetForNewRun;
+        if (GameManager.I != null)
+        {
+            GameManager.I.OnGameStarted += ResetForNewRun;
+            GameManager.I.OnFloorStarted += ResetForNewRun;
+        }
         ResetForNewRun();
     }
 
     void OnDestroy()
     {
-        if (GameManager.I != null) GameManager.I.OnGameStarted -= ResetForNewRun;
+        if (GameManager.I != null)
+        {
+            GameManager.I.OnGameStarted -= ResetForNewRun;
+            GameManager.I.OnFloorStarted -= ResetForNewRun;
+        }
     }
 
     void ResetForNewRun()

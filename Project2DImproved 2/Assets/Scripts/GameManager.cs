@@ -20,6 +20,7 @@ public class GameManager : MonoBehaviour
     public bool hasKey;
     public float elapsed;
     public string objective = "Find the gold key.";
+    public int currentFloor;
     public int playerLevel;
     public int currentXP;
     public int xpToNextLevel;
@@ -41,6 +42,8 @@ public class GameManager : MonoBehaviour
     public event Action OnRunEnded;
     public event Action OnLevelUpAvailable;
     public event Action OnPassiveUpgradeAvailable;
+    public event Action OnFloorStarted;
+    public event Action OnFloorCleared;
 
     void Awake()
     {
@@ -80,10 +83,11 @@ public class GameManager : MonoBehaviour
         hasKey = false;
         elapsed = 0f;
         ResetRunProgress();
-        objective = "Find the gold key, then reach the blue exit.";
+        objective = FloorObjective();
         phase = Phase.Playing;
         Time.timeScale = 1f;
         OnGameStarted?.Invoke();
+        OnFloorStarted?.Invoke();
         OnStateChanged?.Invoke();
     }
 
@@ -92,7 +96,7 @@ public class GameManager : MonoBehaviour
         if (phase != Phase.Playing || hasKey) return;
 
         hasKey = true;
-        objective = "Key collected. The blue exit is unlocked.";
+        objective = "Key collected. Enter the exit to choose a passive upgrade.";
         OnStateChanged?.Invoke();
     }
 
@@ -102,21 +106,12 @@ public class GameManager : MonoBehaviour
 
         if (!hasKey)
         {
-            objective = "The exit is locked. Collect the gold key first.";
+            objective = "The exit is locked. Collect the floor key first.";
             OnStateChanged?.Invoke();
             return;
         }
 
         BeginPassiveUpgrade();
-    }
-
-    void CompleteRunAfterPassiveUpgrade()
-    {
-        phase = Phase.Won;
-        objective = "Dungeon cleared. Passive growth locked in.";
-        Time.timeScale = 0f;
-        OnRunEnded?.Invoke();
-        OnStateChanged?.Invoke();
     }
 
     public void PlayerHit()
@@ -192,7 +187,7 @@ public class GameManager : MonoBehaviour
 
         passiveUpgradesChosen++;
         objective = "Passive upgrade chosen: " + PassiveUpgradeDisplayName(upgrade) + ".";
-        CompleteRunAfterPassiveUpgrade();
+        StartNextFloor();
     }
 
     public void Pause()
@@ -222,6 +217,7 @@ public class GameManager : MonoBehaviour
     void ResetRunProgress()
     {
         playerLevel = Mathf.Max(1, startingLevel);
+        currentFloor = 1;
         currentXP = 0;
         xpToNextLevel = Mathf.Max(1, startingXPToNextLevel);
         enemiesDefeated = 0;
@@ -255,8 +251,26 @@ public class GameManager : MonoBehaviour
         objective = "Floor cleared! Choose a passive upgrade.";
         phase = Phase.PassiveUpgrade;
         Time.timeScale = 0f;
+        OnFloorCleared?.Invoke();
         OnPassiveUpgradeAvailable?.Invoke();
         OnStateChanged?.Invoke();
+    }
+
+    void StartNextFloor()
+    {
+        currentFloor++;
+        hasKey = false;
+        objective = FloorObjective();
+        phase = Phase.Playing;
+        Time.timeScale = 1f;
+        OnFloorStarted?.Invoke();
+        OnStateChanged?.Invoke();
+    }
+
+    string FloorObjective()
+    {
+        if (currentFloor <= 1) return "Floor 1: Find the key, then enter the exit.";
+        return "Floor " + currentFloor + ": Find the key, survive, and keep going.";
     }
 
     int CalculateXPToNextLevel(int level)
