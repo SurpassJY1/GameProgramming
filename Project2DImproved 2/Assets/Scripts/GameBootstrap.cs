@@ -11,19 +11,69 @@ public class GameBootstrap : MonoBehaviour
     const string WallSpritePath = "thirdparty/topdown-shooter/wall_tile.png";
     const float TilePixelsPerUnit = 64f;
 
+    GameObject currentFloorRoot;
+    Transform playerTransform;
+    Player playerController;
+
+    struct WallSpec
+    {
+        public Vector2 position;
+        public Vector2 size;
+
+        public WallSpec(Vector2 position, Vector2 size)
+        {
+            this.position = position;
+            this.size = size;
+        }
+    }
+
+    struct EnemyPatrolSpec
+    {
+        public Vector3 pointA;
+        public Vector3 pointB;
+
+        public EnemyPatrolSpec(Vector3 pointA, Vector3 pointB)
+        {
+            this.pointA = pointA;
+            this.pointB = pointB;
+        }
+    }
+
+    struct RoomVariant
+    {
+        public Vector3 playerStart;
+        public Vector2 keyPosition;
+        public Vector2 exitPosition;
+        public WallSpec[] walls;
+        public EnemyPatrolSpec[] enemies;
+
+        public RoomVariant(Vector3 playerStart, Vector2 keyPosition, Vector2 exitPosition, WallSpec[] walls, EnemyPatrolSpec[] enemies)
+        {
+            this.playerStart = playerStart;
+            this.keyPosition = keyPosition;
+            this.exitPosition = exitPosition;
+            this.walls = walls;
+            this.enemies = enemies;
+        }
+    }
+
     void Awake()
     {
         BuildCamera();
         BuildGameManager();
-        BuildDungeon();
         GameObject player = BuildPlayer();
-        BuildKey();
-        BuildExit();
-        BuildEnemy("Guard_A", player.transform, new Vector3(-4f, 2f, 0f), new Vector3(-1f, 2f, 0f));
-        BuildEnemy("Guard_B", player.transform, new Vector3(2f, -1f, 0f), new Vector3(5f, -1f, 0f));
+        playerTransform = player.transform;
+        playerController = player.GetComponent<Player>();
+        if (GameManager.I != null) GameManager.I.OnFloorStarted += BuildCurrentFloor;
+        BuildFloor(1);
         BuildHUD();
         BuildMenusCanvas();
         EnsureEventSystem();
+    }
+
+    void OnDestroy()
+    {
+        if (GameManager.I != null) GameManager.I.OnFloorStarted -= BuildCurrentFloor;
     }
 
     void BuildCamera()
@@ -53,9 +103,26 @@ public class GameBootstrap : MonoBehaviour
         new GameObject("GameManager").AddComponent<GameManager>();
     }
 
-    void BuildDungeon()
+    void BuildCurrentFloor()
     {
-        // Keep floor clean so walkable space is easy to read.
+        int floor = GameManager.I != null ? Mathf.Max(1, GameManager.I.currentFloor) : 1;
+        BuildFloor(floor);
+    }
+
+    void BuildFloor(int floor)
+    {
+        if (currentFloorRoot != null)
+        {
+            currentFloorRoot.SetActive(false);
+            Destroy(currentFloorRoot);
+        }
+
+        currentFloorRoot = new GameObject("Floor_" + floor);
+
+        RoomVariant room = GetRoomVariant(floor);
+        if (playerController != null) playerController.ResetForNewFloor(room.playerStart);
+        else if (playerTransform != null) playerTransform.position = room.playerStart;
+
         Sprite floorSprite = Art2D.Square(new Color(0.13f, 0.13f, 0.16f), 100);
         Sprite wallSprite = Art2D.FromPngFile(WallSpritePath, TilePixelsPerUnit) ?? Art2D.Square(new Color(0.75f, 0.75f, 0.75f));
         BuildTiledFloor(floorSprite);
@@ -66,26 +133,106 @@ public class GameBootstrap : MonoBehaviour
         BuildWall("West Wall", new Vector2(-7f, 0f), new Vector2(0.5f, 9f), wallSprite);
         BuildWall("East Wall", new Vector2(7f, 0f), new Vector2(0.5f, 9f), wallSprite);
 
-        // Core corridors.
-        BuildWall("Left Chamber Divider", new Vector2(-2.2f, 1.2f), new Vector2(0.5f, 4.0f), wallSprite);
-        BuildWall("Right Chamber Divider", new Vector2(2.2f, -1.2f), new Vector2(0.5f, 4.0f), wallSprite);
-        BuildWall("Upper Block", new Vector2(3.8f, 1.9f), new Vector2(2.4f, 0.5f), wallSprite);
-        BuildWall("Lower Block", new Vector2(-3.8f, -1.9f), new Vector2(2.4f, 0.5f), wallSprite);
+        for (int i = 0; i < room.walls.Length; i++)
+            BuildWall("Room Wall " + i, room.walls[i].position, room.walls[i].size, wallSprite);
 
-        // Added complexity: extra islands and choke points.
-        BuildWall("Center Pillar A", new Vector2(-0.3f, 0.4f), new Vector2(1.0f, 1.0f), wallSprite);
-        BuildWall("Center Pillar B", new Vector2(0.9f, -0.9f), new Vector2(1.0f, 1.0f), wallSprite);
-        BuildWall("Top Left Block", new Vector2(-5.2f, 2.8f), new Vector2(1.4f, 0.5f), wallSprite);
-        BuildWall("Top Right Block", new Vector2(4.9f, 3.0f), new Vector2(1.8f, 0.5f), wallSprite);
-        BuildWall("Bottom Right Block", new Vector2(4.8f, -2.8f), new Vector2(1.8f, 0.5f), wallSprite);
-        BuildWall("Bottom Left Block", new Vector2(-5.0f, -2.6f), new Vector2(1.6f, 0.5f), wallSprite);
-        BuildWall("Mid Bridge A", new Vector2(-4.2f, 0.2f), new Vector2(0.5f, 1.8f), wallSprite);
-        BuildWall("Mid Bridge B", new Vector2(4.1f, -0.1f), new Vector2(0.5f, 1.8f), wallSprite);
+        BuildKey(room.keyPosition);
+        BuildExit(room.exitPosition);
+
+        for (int i = 0; i < room.enemies.Length; i++)
+            BuildEnemy("Guard_" + floor + "_" + i, playerTransform, room.enemies[i].pointA, room.enemies[i].pointB);
+    }
+
+    RoomVariant GetRoomVariant(int floor)
+    {
+        switch ((floor - 1) % 4)
+        {
+            case 1:
+                return new RoomVariant(
+                    new Vector3(-5.5f, 3.1f, 0f),
+                    new Vector2(5.2f, -3.0f),
+                    new Vector2(5.6f, 3.0f),
+                    new[]
+                    {
+                        new WallSpec(new Vector2(-3.8f, 1.6f), new Vector2(2.4f, 0.5f)),
+                        new WallSpec(new Vector2(-1.4f, -1.2f), new Vector2(0.5f, 4.0f)),
+                        new WallSpec(new Vector2(1.6f, 1.2f), new Vector2(0.5f, 4.0f)),
+                        new WallSpec(new Vector2(4.2f, -1.7f), new Vector2(2.2f, 0.5f)),
+                        new WallSpec(new Vector2(0.1f, 0.1f), new Vector2(1.1f, 1.1f))
+                    },
+                    new[]
+                    {
+                        new EnemyPatrolSpec(new Vector3(-4.6f, -2.4f, 0f), new Vector3(-2.2f, -2.4f, 0f)),
+                        new EnemyPatrolSpec(new Vector3(2.5f, 2.3f, 0f), new Vector3(5.1f, 2.3f, 0f))
+                    });
+            case 2:
+                return new RoomVariant(
+                    new Vector3(5.4f, -3.1f, 0f),
+                    new Vector2(-5.2f, 3.0f),
+                    new Vector2(-5.6f, -3.1f),
+                    new[]
+                    {
+                        new WallSpec(new Vector2(-3.6f, -0.8f), new Vector2(0.5f, 4.8f)),
+                        new WallSpec(new Vector2(-0.8f, 1.8f), new Vector2(3.0f, 0.5f)),
+                        new WallSpec(new Vector2(1.8f, -1.8f), new Vector2(3.0f, 0.5f)),
+                        new WallSpec(new Vector2(4.5f, 0.6f), new Vector2(0.5f, 3.2f)),
+                        new WallSpec(new Vector2(0.4f, -0.1f), new Vector2(1.0f, 1.0f))
+                    },
+                    new[]
+                    {
+                        new EnemyPatrolSpec(new Vector3(3.2f, 2.9f, 0f), new Vector3(5.4f, 2.9f, 0f)),
+                        new EnemyPatrolSpec(new Vector3(-4.9f, -2.9f, 0f), new Vector3(-2.0f, -2.9f, 0f))
+                    });
+            case 3:
+                return new RoomVariant(
+                    new Vector3(0f, -3.4f, 0f),
+                    new Vector2(0f, 3.3f),
+                    new Vector2(5.8f, 0f),
+                    new[]
+                    {
+                        new WallSpec(new Vector2(-4.5f, 1.3f), new Vector2(2.5f, 0.5f)),
+                        new WallSpec(new Vector2(-2.3f, -1.5f), new Vector2(0.5f, 2.7f)),
+                        new WallSpec(new Vector2(0f, 0.3f), new Vector2(2.0f, 0.5f)),
+                        new WallSpec(new Vector2(2.4f, 1.7f), new Vector2(0.5f, 3.0f)),
+                        new WallSpec(new Vector2(4.7f, -2.0f), new Vector2(2.1f, 0.5f))
+                    },
+                    new[]
+                    {
+                        new EnemyPatrolSpec(new Vector3(-5.0f, -2.8f, 0f), new Vector3(-3.2f, -0.4f, 0f)),
+                        new EnemyPatrolSpec(new Vector3(1.2f, 2.9f, 0f), new Vector3(4.8f, 2.9f, 0f))
+                    });
+            default:
+                return new RoomVariant(
+                    new Vector3(-5.6f, -3.2f, 0f),
+                    new Vector2(5.4f, 3.1f),
+                    new Vector2(5.7f, -3.2f),
+                    new[]
+                    {
+                        new WallSpec(new Vector2(-2.2f, 1.2f), new Vector2(0.5f, 4.0f)),
+                        new WallSpec(new Vector2(2.2f, -1.2f), new Vector2(0.5f, 4.0f)),
+                        new WallSpec(new Vector2(3.8f, 1.9f), new Vector2(2.4f, 0.5f)),
+                        new WallSpec(new Vector2(-3.8f, -1.9f), new Vector2(2.4f, 0.5f)),
+                        new WallSpec(new Vector2(-0.3f, 0.4f), new Vector2(1.0f, 1.0f)),
+                        new WallSpec(new Vector2(0.9f, -0.9f), new Vector2(1.0f, 1.0f)),
+                        new WallSpec(new Vector2(-5.2f, 2.8f), new Vector2(1.4f, 0.5f)),
+                        new WallSpec(new Vector2(4.9f, 3.0f), new Vector2(1.8f, 0.5f)),
+                        new WallSpec(new Vector2(4.8f, -2.8f), new Vector2(1.8f, 0.5f)),
+                        new WallSpec(new Vector2(-5.0f, -2.6f), new Vector2(1.6f, 0.5f)),
+                        new WallSpec(new Vector2(-4.2f, 0.2f), new Vector2(0.5f, 1.8f)),
+                        new WallSpec(new Vector2(4.1f, -0.1f), new Vector2(0.5f, 1.8f))
+                    },
+                    new[]
+                    {
+                        new EnemyPatrolSpec(new Vector3(-4f, 2f, 0f), new Vector3(-1f, 2f, 0f)),
+                        new EnemyPatrolSpec(new Vector3(2f, -1f, 0f), new Vector3(5f, -1f, 0f))
+                    });
+        }
     }
 
     void BuildTiledFloor(Sprite floorSprite)
     {
         GameObject root = new GameObject("Dungeon Floor");
+        root.transform.SetParent(currentFloorRoot.transform);
         for (int x = -6; x <= 6; x++)
         {
             for (int y = -4; y <= 4; y++)
@@ -104,6 +251,7 @@ public class GameBootstrap : MonoBehaviour
     void BuildWall(string name, Vector2 pos, Vector2 size, Sprite wallSprite)
     {
         GameObject wall = new GameObject(name);
+        wall.transform.SetParent(currentFloorRoot.transform);
         wall.layer = WallLayer;
         wall.transform.position = pos;
         BoxCollider2D collider = wall.AddComponent<BoxCollider2D>();
@@ -189,10 +337,11 @@ public class GameBootstrap : MonoBehaviour
         return bullet;
     }
 
-    void BuildKey()
+    void BuildKey(Vector2 position)
     {
         GameObject key = new GameObject("Gold Key");
-        Vector2 safePos = ResolveFreeCirclePosition(new Vector2(5.4f, 3.1f), 0.3f);
+        key.transform.SetParent(currentFloorRoot.transform);
+        Vector2 safePos = ResolveFreeCirclePosition(position, 0.3f);
         key.transform.position = new Vector3(safePos.x, safePos.y, 0f);
         key.transform.localScale = Vector3.one * 0.45f;
         SpriteRenderer sr = key.AddComponent<SpriteRenderer>();
@@ -204,10 +353,11 @@ public class GameBootstrap : MonoBehaviour
         key.AddComponent<KeyPickup>();
     }
 
-    void BuildExit()
+    void BuildExit(Vector2 position)
     {
         GameObject exit = new GameObject("Exit Door");
-        Vector2 safePos = ResolveFreeBoxPosition(new Vector2(5.7f, -3.2f), new Vector2(0.9f, 1.2f));
+        exit.transform.SetParent(currentFloorRoot.transform);
+        Vector2 safePos = ResolveFreeBoxPosition(position, new Vector2(0.9f, 1.2f));
         exit.transform.position = new Vector3(safePos.x, safePos.y, 0f);
         exit.transform.localScale = new Vector3(0.9f, 1.2f, 1f);
         SpriteRenderer sr = exit.AddComponent<SpriteRenderer>();
@@ -227,6 +377,7 @@ public class GameBootstrap : MonoBehaviour
         b = new Vector3(safeB.x, safeB.y, 0f);
 
         GameObject enemy = new GameObject(name);
+        enemy.transform.SetParent(currentFloorRoot.transform);
         enemy.transform.position = a;
         enemy.transform.localScale = Vector3.one * 0.9f;
         SpriteRenderer sr = enemy.AddComponent<SpriteRenderer>();

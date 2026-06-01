@@ -101,6 +101,14 @@ public class Player : MonoBehaviour
         if (sr != null) sr.color = baseColor;
     }
 
+    public void ResetForNewFloor(Vector3 position)
+    {
+        transform.position = position;
+        invulnerabilityTimer = 0f;
+        footstepTimer = 0f;
+        if (sr != null) sr.color = baseColor;
+    }
+
     void OnTriggerEnter2D(Collider2D other)
     {
         KeyPickup key = other.GetComponent<KeyPickup>();
