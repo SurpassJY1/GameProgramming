@@ -8,7 +8,11 @@ public class UpgradeSelectionUI : MonoBehaviour
     {
         WeaponUpgradeKind.ExtraProjectile,
         WeaponUpgradeKind.RapidFire,
-        WeaponUpgradeKind.DamageUp
+        WeaponUpgradeKind.DamageUp,
+        WeaponUpgradeKind.PiercingShot,
+        WeaponUpgradeKind.BurnShot,
+        WeaponUpgradeKind.SlowShot,
+        WeaponUpgradeKind.ExplosiveShot
     };
 
     GameObject root;
