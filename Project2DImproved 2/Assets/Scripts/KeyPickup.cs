@@ -11,7 +11,20 @@ public class KeyPickup : MonoBehaviour
     void Start()
     {
         startPosition = transform.position;
-        if (GameManager.I != null) GameManager.I.OnGameStarted += ResetForNewRun;
+        if (GameManager.I != null)
+        {
+            GameManager.I.OnGameStarted += ResetForNewRun;
+            GameManager.I.OnFloorStarted += ResetForNewRun;
+        }
+    }
+
+    void OnDestroy()
+    {
+        if (GameManager.I != null)
+        {
+            GameManager.I.OnGameStarted -= ResetForNewRun;
+            GameManager.I.OnFloorStarted -= ResetForNewRun;
+        }
     }
 
     void Update()
@@ -26,7 +39,7 @@ public class KeyPickup : MonoBehaviour
         gameObject.SetActive(false);
     }
 
-    // Re-enable and reposition the key whenever a new run starts.
+    // Re-enable and reposition the key whenever a new floor starts.
     void ResetForNewRun()
     {
         transform.position = startPosition;
