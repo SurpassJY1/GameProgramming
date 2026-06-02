@@ -10,6 +10,16 @@ public class GameBootstrap : MonoBehaviour
     const string EnemySpritePath = "thirdparty/topdown-shooter/enemy.png";
     const string WallSpritePath = "thirdparty/topdown-shooter/wall_tile.png";
     const float TilePixelsPerUnit = 64f;
+    const int BaseEnemyCount = 2;
+    const int MaxEnemyCount = 8;
+    const int BaseEnemyHealth = 3;
+    const int MaxEnemyHealth = 14;
+    const int BaseEnemyXP = 10;
+    const int MaxEnemyXP = 45;
+    const float BasePatrolSpeed = 2.0f;
+    const float BaseChaseSpeed = 3.0f;
+    const float MaxPatrolSpeed = 3.4f;
+    const float MaxChaseSpeed = 5.2f;
 
     GameObject currentFloorRoot;
     Transform playerTransform;
@@ -139,8 +149,12 @@ public class GameBootstrap : MonoBehaviour
         BuildKey(room.keyPosition);
         BuildExit(room.exitPosition);
 
-        for (int i = 0; i < room.enemies.Length; i++)
-            BuildEnemy("Guard_" + floor + "_" + i, playerTransform, room.enemies[i].pointA, room.enemies[i].pointB);
+        int enemyCount = EnemyCountForFloor(floor);
+        for (int i = 0; i < enemyCount; i++)
+        {
+            EnemyPatrolSpec patrol = PatrolForEnemy(room, i);
+            BuildEnemy("Guard_" + floor + "_" + i, playerTransform, patrol.pointA, patrol.pointB, floor);
+        }
     }
 
     RoomVariant GetRoomVariant(int floor)
@@ -369,10 +383,31 @@ public class GameBootstrap : MonoBehaviour
         exit.AddComponent<ExitDoor>();
     }
 
-    void BuildEnemy(string name, Transform player, Vector3 a, Vector3 b)
+    int EnemyCountForFloor(int floor)
+    {
+        int addedEnemies = Mathf.FloorToInt(Mathf.Max(0, floor - 1) / 2f);
+        return Mathf.Clamp(BaseEnemyCount + addedEnemies, BaseEnemyCount, MaxEnemyCount);
+    }
+
+    EnemyPatrolSpec PatrolForEnemy(RoomVariant room, int enemyIndex)
+    {
+        EnemyPatrolSpec basePatrol = room.enemies[enemyIndex % room.enemies.Length];
+        if (enemyIndex < room.enemies.Length) return basePatrol;
+
+        float offsetStep = 0.45f + (enemyIndex % 3) * 0.25f;
+        Vector3 offset = new Vector3(
+            ((enemyIndex % 2) == 0 ? 1f : -1f) * offsetStep,
+            (((enemyIndex / 2) % 2) == 0 ? 1f : -1f) * offsetStep,
+            0f);
+        return new EnemyPatrolSpec(basePatrol.pointA + offset, basePatrol.pointB - offset);
+    }
+
+    void BuildEnemy(string name, Transform player, Vector3 a, Vector3 b, int floor)
     {
         Vector2 safeA = ResolveFreeCirclePosition(new Vector2(a.x, a.y), 0.38f);
         Vector2 safeB = ResolveFreeCirclePosition(new Vector2(b.x, b.y), 0.38f);
+        safeA = ResolveAwayFromPlayer(safeA, 1.35f);
+        safeB = ResolveAwayFromPlayer(safeB, 1.35f);
         a = new Vector3(safeA.x, safeA.y, 0f);
         b = new Vector3(safeB.x, safeB.y, 0f);
 
@@ -395,6 +430,29 @@ public class GameBootstrap : MonoBehaviour
         guard.pointA = a;
         guard.pointB = b;
         guard.wallMask = 1 << WallLayer;
+        ApplyEnemyScaling(guard, floor);
+    }
+
+    void ApplyEnemyScaling(Enemy enemy, int floor)
+    {
+        int floorIndex = Mathf.Max(0, floor - 1);
+        enemy.maxHealth = Mathf.Min(MaxEnemyHealth, BaseEnemyHealth + Mathf.FloorToInt(floorIndex * 0.75f));
+        enemy.currentHealth = enemy.maxHealth;
+        enemy.patrolSpeed = Mathf.Min(MaxPatrolSpeed, BasePatrolSpeed + floorIndex * 0.08f);
+        enemy.chaseSpeed = Mathf.Min(MaxChaseSpeed, BaseChaseSpeed + floorIndex * 0.12f);
+        enemy.xpReward = Mathf.Min(MaxEnemyXP, BaseEnemyXP + floorIndex * 3);
+    }
+
+    Vector2 ResolveAwayFromPlayer(Vector2 desired, float minDistance)
+    {
+        if (playerTransform == null) return desired;
+        Vector2 playerPosition = playerTransform.position;
+        if (Vector2.Distance(desired, playerPosition) >= minDistance) return desired;
+
+        Vector2 away = desired - playerPosition;
+        if (away.sqrMagnitude < 0.001f) away = Vector2.right;
+        Vector2 candidate = playerPosition + away.normalized * minDistance;
+        return ResolveFreeCirclePosition(candidate, 0.38f);
     }
 
     Vector2 ResolveFreeCirclePosition(Vector2 desired, float radius)
