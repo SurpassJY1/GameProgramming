@@ -34,8 +34,14 @@ public class GameManager : MonoBehaviour
     public int burnShotLevel;
     public int slowShotLevel;
     public int explosiveShotLevel;
+    public int maxLivesUpLevel;
+    public int moveSpeedUpLevel;
+    public int fireCooldownBonusLevel;
+    public int xpBonusLevel;
 
+    int baseStartLives;
     PlayerCombat playerCombat;
+    Player player;
 
     public event Action OnStateChanged;
     public event Action OnGameStarted;
@@ -54,6 +60,7 @@ public class GameManager : MonoBehaviour
         }
 
         I = this;
+        baseStartLives = startLives;
     }
 
     void Update()
@@ -79,10 +86,10 @@ public class GameManager : MonoBehaviour
 
     public void StartGame()
     {
-        lives = startLives;
         hasKey = false;
         elapsed = 0f;
         ResetRunProgress();
+        lives = startLives;
         objective = FloorObjective();
         phase = Phase.Playing;
         Time.timeScale = 1f;
@@ -138,7 +145,7 @@ public class GameManager : MonoBehaviour
         if (phase != Phase.Playing) return;
 
         enemiesDefeated++;
-        AddXP(xpReward);
+        AddXP(Mathf.RoundToInt(xpReward * XPBonusMultiplier()));
     }
 
     public void AddXP(int amount)
@@ -186,8 +193,53 @@ public class GameManager : MonoBehaviour
         if (phase != Phase.PassiveUpgrade) return;
 
         passiveUpgradesChosen++;
+        RegisterPassiveUpgrade(upgrade);
+        ApplyPassiveUpgrade(upgrade);
         objective = "Passive upgrade chosen: " + PassiveUpgradeDisplayName(upgrade) + ".";
         StartNextFloor();
+    }
+
+    public string GetPassiveBuildSummary()
+    {
+        string summary = AppendUpgradeSummary("", "Life", maxLivesUpLevel);
+        summary = AppendUpgradeSummary(summary, "Move", moveSpeedUpLevel);
+        summary = AppendUpgradeSummary(summary, "Fire", fireCooldownBonusLevel);
+        summary = AppendUpgradeSummary(summary, "XP", xpBonusLevel);
+        return string.IsNullOrEmpty(summary) ? "None" : summary;
+    }
+
+    public string GetPassiveUpgradeDisplayName(PassiveUpgradeKind upgrade)
+    {
+        return PassiveUpgradeDisplayName(upgrade);
+    }
+
+    public string GetPassiveUpgradeDescription(PassiveUpgradeKind upgrade)
+    {
+        switch (upgrade)
+        {
+            case PassiveUpgradeKind.MaxLivesUp:
+                return "Increase max lives and heal by 1.";
+            case PassiveUpgradeKind.MoveSpeedUp:
+                return "Move faster for the rest of this run.";
+            case PassiveUpgradeKind.FireCooldownBonus:
+                return "Shoot faster for the rest of this run.";
+            case PassiveUpgradeKind.XPBonus:
+                return "Gain more XP from future kills.";
+            default:
+                return "Improves your run.";
+        }
+    }
+
+    public int GetPassiveUpgradeLevel(PassiveUpgradeKind upgrade)
+    {
+        switch (upgrade)
+        {
+            case PassiveUpgradeKind.MaxLivesUp: return maxLivesUpLevel;
+            case PassiveUpgradeKind.MoveSpeedUp: return moveSpeedUpLevel;
+            case PassiveUpgradeKind.FireCooldownBonus: return fireCooldownBonusLevel;
+            case PassiveUpgradeKind.XPBonus: return xpBonusLevel;
+            default: return 0;
+        }
     }
 
     public void Pause()
@@ -216,6 +268,7 @@ public class GameManager : MonoBehaviour
 
     void ResetRunProgress()
     {
+        startLives = Mathf.Max(1, baseStartLives);
         playerLevel = Mathf.Max(1, startingLevel);
         currentFloor = 1;
         currentXP = 0;
@@ -230,7 +283,12 @@ public class GameManager : MonoBehaviour
         burnShotLevel = 0;
         slowShotLevel = 0;
         explosiveShotLevel = 0;
+        maxLivesUpLevel = 0;
+        moveSpeedUpLevel = 0;
+        fireCooldownBonusLevel = 0;
+        xpBonusLevel = 0;
         playerCombat = null;
+        player = null;
     }
 
     void BeginLevelUp()
@@ -248,7 +306,7 @@ public class GameManager : MonoBehaviour
     void BeginPassiveUpgrade()
     {
         floorsCleared++;
-        objective = "Floor cleared! Choose a passive upgrade.";
+        objective = "Floor cleared! Choose a passive upgrade: 1 Life, 2 Move, 3 Fire, 4 XP.";
         phase = Phase.PassiveUpgrade;
         Time.timeScale = 0f;
         OnFloorCleared?.Invoke();
@@ -380,6 +438,59 @@ public class GameManager : MonoBehaviour
         return playerCombat;
     }
 
+    Player GetPlayer()
+    {
+        if (player != null) return player;
+
+        player = FindFirstObjectByType<Player>();
+        return player;
+    }
+
+    void RegisterPassiveUpgrade(PassiveUpgradeKind upgrade)
+    {
+        switch (upgrade)
+        {
+            case PassiveUpgradeKind.MaxLivesUp:
+                maxLivesUpLevel++;
+                break;
+            case PassiveUpgradeKind.MoveSpeedUp:
+                moveSpeedUpLevel++;
+                break;
+            case PassiveUpgradeKind.FireCooldownBonus:
+                fireCooldownBonusLevel++;
+                break;
+            case PassiveUpgradeKind.XPBonus:
+                xpBonusLevel++;
+                break;
+        }
+    }
+
+    void ApplyPassiveUpgrade(PassiveUpgradeKind upgrade)
+    {
+        switch (upgrade)
+        {
+            case PassiveUpgradeKind.MaxLivesUp:
+                startLives++;
+                lives++;
+                break;
+            case PassiveUpgradeKind.MoveSpeedUp:
+                Player runPlayer = GetPlayer();
+                if (runPlayer != null) runPlayer.ApplyMoveSpeedBonus(0.35f);
+                break;
+            case PassiveUpgradeKind.FireCooldownBonus:
+                PlayerCombat combat = GetPlayerCombat();
+                if (combat != null) combat.ApplyFireCooldownBonus(0.9f);
+                break;
+            case PassiveUpgradeKind.XPBonus:
+                break;
+        }
+    }
+
+    float XPBonusMultiplier()
+    {
+        return 1f + xpBonusLevel * 0.2f;
+    }
+
     string AppendUpgradeSummary(string summary, string label, int level)
     {
         if (level <= 0) return summary;
@@ -401,8 +512,8 @@ public class GameManager : MonoBehaviour
         {
             case PassiveUpgradeKind.MaxLivesUp: return "Max Lives Up";
             case PassiveUpgradeKind.MoveSpeedUp: return "Move Speed Up";
-            case PassiveUpgradeKind.DashRecoveryUp: return "Dash Recovery Up";
-            case PassiveUpgradeKind.PickupRangeUp: return "Pickup Range Up";
+            case PassiveUpgradeKind.FireCooldownBonus: return "Fire Cooldown Bonus";
+            case PassiveUpgradeKind.XPBonus: return "XP Bonus";
             default: return upgrade.ToString();
         }
     }
@@ -411,7 +522,8 @@ public class GameManager : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Alpha1)) ChoosePassiveUpgrade(PassiveUpgradeKind.MaxLivesUp);
         else if (Input.GetKeyDown(KeyCode.Alpha2)) ChoosePassiveUpgrade(PassiveUpgradeKind.MoveSpeedUp);
-        else if (Input.GetKeyDown(KeyCode.Alpha3)) ChoosePassiveUpgrade(PassiveUpgradeKind.DashRecoveryUp);
+        else if (Input.GetKeyDown(KeyCode.Alpha3)) ChoosePassiveUpgrade(PassiveUpgradeKind.FireCooldownBonus);
+        else if (Input.GetKeyDown(KeyCode.Alpha4)) ChoosePassiveUpgrade(PassiveUpgradeKind.XPBonus);
     }
 }
 
@@ -432,6 +544,6 @@ public enum PassiveUpgradeKind
 {
     MaxLivesUp,
     MoveSpeedUp,
-    DashRecoveryUp,
-    PickupRangeUp
+    FireCooldownBonus,
+    XPBonus
 }

@@ -505,6 +505,8 @@ public class GameBootstrap : MonoBehaviour
         hud.xpBarFill = MakeHudBar(cv.transform, new Vector2(20, -170), new Vector2(280, 16), new Color(0.05f, 0.08f, 0.11f, 0.82f), new Color(0.35f, 0.85f, 1f, 0.95f));
         hud.weaponText = MakeText(cv.transform, "Weapon: Basic Shot", new Vector2(20, -202), new Vector2(0, 1), 20, TextAnchor.UpperLeft, new Color(1f, 0.86f, 0.42f));
         hud.weaponText.GetComponent<RectTransform>().sizeDelta = new Vector2(520, 100);
+        hud.passiveText = MakeText(cv.transform, "Passives: None", new Vector2(20, -250), new Vector2(0, 1), 20, TextAnchor.UpperLeft, new Color(0.75f, 1f, 0.72f));
+        hud.passiveText.GetComponent<RectTransform>().sizeDelta = new Vector2(520, 100);
         hud.timerText = MakeText(cv.transform, "Time: 0s", new Vector2(-20, -20), new Vector2(1, 1), 28, TextAnchor.UpperRight, Color.white);
         hud.objectiveText = MakeText(cv.transform, "", new Vector2(0, 30), new Vector2(0.5f, 0), 24, TextAnchor.LowerCenter, new Color(0.85f, 0.9f, 1f));
         MakeText(cv.transform, "ESC = pause", new Vector2(-20, 30), new Vector2(1, 0), 18, TextAnchor.LowerRight, new Color(1, 1, 1, 0.55f));
