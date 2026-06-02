@@ -16,6 +16,7 @@ public class Player : MonoBehaviour
     Vector3 startPosition;
     float invulnerabilityTimer;
     float footstepTimer;
+    float baseMoveSpeed;
     AudioSource audioSrc;
     SpriteRenderer sr;
     Color baseColor;
@@ -23,6 +24,7 @@ public class Player : MonoBehaviour
     void Awake()
     {
         startPosition = transform.position;
+        baseMoveSpeed = moveSpeed;
         audioSrc = GetComponent<AudioSource>();
         if (audioSrc == null) audioSrc = gameObject.AddComponent<AudioSource>();
         audioSrc.playOnAwake = false;
@@ -96,9 +98,15 @@ public class Player : MonoBehaviour
     void ResetForNewRun()
     {
         transform.position = startPosition;
+        moveSpeed = baseMoveSpeed;
         invulnerabilityTimer = 0f;
         footstepTimer = 0f;
         if (sr != null) sr.color = baseColor;
+    }
+
+    public void ApplyMoveSpeedBonus(float amount)
+    {
+        moveSpeed = Mathf.Min(baseMoveSpeed + 2.0f, moveSpeed + Mathf.Max(0f, amount));
     }
 
     public void ResetForNewFloor(Vector3 position)

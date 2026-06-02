@@ -138,6 +138,12 @@ public class PlayerCombat : MonoBehaviour
         }
     }
 
+    public void ApplyFireCooldownBonus(float multiplier)
+    {
+        fireCooldown = Mathf.Max(minFireCooldown, fireCooldown * Mathf.Clamp(multiplier, 0.5f, 1f));
+        cooldownTimer = Mathf.Min(cooldownTimer, fireCooldown);
+    }
+
     void ResetForNewRun()
     {
         fireCooldown = baseFireCooldown;
