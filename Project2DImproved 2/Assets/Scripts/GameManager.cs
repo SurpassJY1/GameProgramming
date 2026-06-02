@@ -12,9 +12,9 @@ public class GameManager : MonoBehaviour
     [Header("Tuning")]
     public int startLives = 3;
     public int startingLevel = 1;
-    public int startingXPToNextLevel = 20;
-    public float xpGrowthMultiplier = 1.35f;
-    public int xpGrowthFlatBonus = 8;
+    public int startingXPToNextLevel = 16;
+    public float xpGrowthMultiplier = 1.22f;
+    public int xpGrowthFlatBonus = 5;
 
     public int lives;
     public bool hasKey;
@@ -475,11 +475,11 @@ public class GameManager : MonoBehaviour
                 break;
             case PassiveUpgradeKind.MoveSpeedUp:
                 Player runPlayer = GetPlayer();
-                if (runPlayer != null) runPlayer.ApplyMoveSpeedBonus(0.35f);
+                if (runPlayer != null) runPlayer.ApplyMoveSpeedBonus(0.42f);
                 break;
             case PassiveUpgradeKind.FireCooldownBonus:
                 PlayerCombat combat = GetPlayerCombat();
-                if (combat != null) combat.ApplyFireCooldownBonus(0.9f);
+                if (combat != null) combat.ApplyFireCooldownBonus(0.86f);
                 break;
             case PassiveUpgradeKind.XPBonus:
                 break;
@@ -488,7 +488,7 @@ public class GameManager : MonoBehaviour
 
     float XPBonusMultiplier()
     {
-        return 1f + xpBonusLevel * 0.2f;
+        return 1f + xpBonusLevel * 0.25f;
     }
 
     string AppendUpgradeSummary(string summary, string label, int level)
