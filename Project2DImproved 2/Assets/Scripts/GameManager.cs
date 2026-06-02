@@ -103,7 +103,7 @@ public class GameManager : MonoBehaviour
         if (phase != Phase.Playing || hasKey) return;
 
         hasKey = true;
-        objective = "Key collected. Enter the exit to choose a passive upgrade.";
+        objective = "Floor " + currentFloor + ": Key collected. Enter the exit to choose a passive upgrade.";
         OnStateChanged?.Invoke();
     }
 
@@ -113,7 +113,7 @@ public class GameManager : MonoBehaviour
 
         if (!hasKey)
         {
-            objective = "The exit is locked. Collect the floor key first.";
+            objective = "Floor " + currentFloor + ": The exit is locked. Collect the floor key first.";
             OnStateChanged?.Invoke();
             return;
         }
@@ -127,8 +127,8 @@ public class GameManager : MonoBehaviour
 
         lives = Mathf.Max(0, lives - 1);
         objective = lives > 0
-            ? "Careful. Avoid the guards and find the exit."
-            : "You were caught by the dungeon guards.";
+            ? "Floor " + currentFloor + ": Careful. Survive, find the key, and keep going."
+            : "Run ended on floor " + currentFloor + ".";
 
         if (lives == 0)
         {
@@ -163,7 +163,7 @@ public class GameManager : MonoBehaviour
 
         RegisterWeaponUpgrade(upgrade);
         ApplyWeaponUpgrade(upgrade);
-        objective = "Weapon upgrade chosen: " + UpgradeDisplayName(upgrade) + ". Keep pushing deeper.";
+        objective = "Weapon upgrade chosen: " + UpgradeDisplayName(upgrade) + ". Keep pushing through floor " + currentFloor + ".";
 
         if (currentXP >= xpToNextLevel)
         {
@@ -306,7 +306,7 @@ public class GameManager : MonoBehaviour
     void BeginPassiveUpgrade()
     {
         floorsCleared++;
-        objective = "Floor cleared! Choose a passive upgrade: 1 Life, 2 Move, 3 Fire, 4 XP.";
+        objective = "Floor " + currentFloor + " cleared! Choose a passive upgrade.";
         phase = Phase.PassiveUpgrade;
         Time.timeScale = 0f;
         OnFloorCleared?.Invoke();

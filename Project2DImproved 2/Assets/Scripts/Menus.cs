@@ -49,9 +49,17 @@ public class Menus : MonoBehaviour
     {
         GameManager gm = GameManager.I;
         string time = Mathf.FloorToInt(gm.elapsed) + " seconds";
-        if (winText != null) winText.text = "Run complete in " + time + ".";
+        string runSummary =
+            "Final Floor: " + gm.currentFloor + "\n" +
+            "Final Level: " + gm.playerLevel + "\n" +
+            "Enemies Defeated: " + gm.enemiesDefeated + "\n" +
+            "Survival Time: " + time + "\n" +
+            "Weapon Build: " + gm.GetWeaponBuildSummary() + "\n" +
+            "Passive Build: " + gm.GetPassiveBuildSummary();
+
+        if (winText != null) winText.text = "Run Complete\n\n" + runSummary;
         if (gameOverText != null)
-            gameOverText.text = "Run ended on floor " + gm.currentFloor + " after " + time + ". Enemies defeated: " + gm.enemiesDefeated + ".";
+            gameOverText.text = "Infinite Run Ended\n\n" + runSummary;
     }
 
     public void Click()
