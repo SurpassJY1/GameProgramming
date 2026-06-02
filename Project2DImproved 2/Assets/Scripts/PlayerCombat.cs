@@ -10,8 +10,8 @@ public class PlayerCombat : MonoBehaviour
     public float bulletLifetime = 1.2f;
     public int extraProjectiles;
     public float spreadAngle = 24f;
-    public float minFireCooldown = 0.08f;
-    public float rapidFireMultiplier = 0.82f;
+    public float minFireCooldown = 0.075f;
+    public float rapidFireMultiplier = 0.78f;
     public int damagePerUpgrade = 1;
     public int pierceCount;
     public bool hasBurnShot;
@@ -122,18 +122,18 @@ public class PlayerCombat : MonoBehaviour
                 break;
             case WeaponUpgradeKind.BurnShot:
                 hasBurnShot = true;
-                burnDamage = Mathf.Min(3, burnDamage + 1);
-                burnDuration = Mathf.Min(4.5f, burnDuration + 0.5f);
+                burnDamage = Mathf.Min(4, burnDamage + 1);
+                burnDuration = Mathf.Min(5f, burnDuration + 0.6f);
                 break;
             case WeaponUpgradeKind.SlowShot:
                 hasSlowShot = true;
-                slowDuration = Mathf.Min(3.5f, slowDuration + 0.4f);
-                slowMultiplier = Mathf.Max(0.35f, slowMultiplier - 0.05f);
+                slowDuration = Mathf.Min(4f, slowDuration + 0.45f);
+                slowMultiplier = Mathf.Max(0.32f, slowMultiplier - 0.06f);
                 break;
             case WeaponUpgradeKind.ExplosiveShot:
                 hasExplosiveShot = true;
-                explosionRadius = Mathf.Min(1.9f, explosionRadius + 0.18f);
-                explosionDamage = Mathf.Min(4, explosionDamage + 1);
+                explosionRadius = Mathf.Min(2.05f, explosionRadius + 0.22f);
+                explosionDamage = Mathf.Min(5, explosionDamage + 1);
                 break;
         }
     }
