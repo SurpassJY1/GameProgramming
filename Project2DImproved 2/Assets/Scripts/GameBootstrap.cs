@@ -10,16 +10,16 @@ public class GameBootstrap : MonoBehaviour
     const string EnemySpritePath = "thirdparty/topdown-shooter/enemy.png";
     const string WallSpritePath = "thirdparty/topdown-shooter/wall_tile.png";
     const float TilePixelsPerUnit = 64f;
-    const int BaseEnemyCount = 2;
-    const int MaxEnemyCount = 10;
+    const int BaseEnemyCount = 3;
+    const int MaxEnemyCount = 14;
     const int BaseEnemyHealth = 2;
-    const int MaxEnemyHealth = 16;
+    const int MaxEnemyHealth = 20;
     const int BaseEnemyXP = 9;
     const int MaxEnemyXP = 55;
     const float BasePatrolSpeed = 1.85f;
     const float BaseChaseSpeed = 2.75f;
-    const float MaxPatrolSpeed = 3.55f;
-    const float MaxChaseSpeed = 5.45f;
+    const float MaxPatrolSpeed = 3.8f;
+    const float MaxChaseSpeed = 5.9f;
 
     GameObject currentFloorRoot;
     Transform playerTransform;
@@ -385,7 +385,8 @@ public class GameBootstrap : MonoBehaviour
 
     int EnemyCountForFloor(int floor)
     {
-        int addedEnemies = Mathf.FloorToInt(Mathf.Max(0, floor) / 2f);
+        int floorIndex = Mathf.Max(0, floor - 1);
+        int addedEnemies = Mathf.CeilToInt(floorIndex * 0.75f);
         return Mathf.Clamp(BaseEnemyCount + addedEnemies, BaseEnemyCount, MaxEnemyCount);
     }
 
@@ -436,11 +437,11 @@ public class GameBootstrap : MonoBehaviour
     void ApplyEnemyScaling(Enemy enemy, int floor)
     {
         int floorIndex = Mathf.Max(0, floor - 1);
-        int healthGrowth = Mathf.FloorToInt(floorIndex * 0.9f) + Mathf.FloorToInt(floorIndex / 4f);
+        int healthGrowth = Mathf.FloorToInt(floorIndex * 1.15f) + Mathf.FloorToInt(floorIndex / 3f);
         enemy.maxHealth = Mathf.Min(MaxEnemyHealth, BaseEnemyHealth + healthGrowth);
         enemy.currentHealth = enemy.maxHealth;
-        enemy.patrolSpeed = Mathf.Min(MaxPatrolSpeed, BasePatrolSpeed + floorIndex * 0.1f);
-        enemy.chaseSpeed = Mathf.Min(MaxChaseSpeed, BaseChaseSpeed + floorIndex * 0.16f);
+        enemy.patrolSpeed = Mathf.Min(MaxPatrolSpeed, BasePatrolSpeed + floorIndex * 0.12f);
+        enemy.chaseSpeed = Mathf.Min(MaxChaseSpeed, BaseChaseSpeed + floorIndex * 0.2f);
         enemy.xpReward = Mathf.Min(MaxEnemyXP, BaseEnemyXP + floorIndex * 4);
     }
 
