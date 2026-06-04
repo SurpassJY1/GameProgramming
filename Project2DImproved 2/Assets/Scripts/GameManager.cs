@@ -5,6 +5,7 @@ using UnityEngine;
 public class GameManager : MonoBehaviour
 {
     public static GameManager I { get; private set; }
+    const string TutorialSuccessfulRunsKey = "DungeonKeyRun_TutorialSuccessfulRuns";
 
     public enum Phase { Menu, Playing, Paused, LevelUp, PassiveUpgrade, Won, GameOver }
     public Phase phase = Phase.Menu;
@@ -40,6 +41,7 @@ public class GameManager : MonoBehaviour
     public int xpBonusLevel;
 
     int baseStartLives;
+    bool countedTutorialSuccessThisRun;
     PlayerCombat playerCombat;
     Player player;
 
@@ -88,6 +90,7 @@ public class GameManager : MonoBehaviour
     {
         hasKey = false;
         elapsed = 0f;
+        countedTutorialSuccessThisRun = false;
         ResetRunProgress();
         lives = startLives;
         objective = FloorObjective();
@@ -306,6 +309,7 @@ public class GameManager : MonoBehaviour
     void BeginPassiveUpgrade()
     {
         floorsCleared++;
+        RecordTutorialSuccessIfNeeded();
         objective = "Floor " + currentFloor + " cleared! Choose a passive upgrade.";
         phase = Phase.PassiveUpgrade;
         Time.timeScale = 0f;
@@ -329,6 +333,21 @@ public class GameManager : MonoBehaviour
     {
         if (currentFloor <= 1) return "Floor 1: Find the key, then enter the exit.";
         return "Floor " + currentFloor + ": Find the key, survive, and keep going.";
+    }
+
+    public bool ShouldShowTutorialPrompts()
+    {
+        return PlayerPrefs.GetInt(TutorialSuccessfulRunsKey, 0) < 3;
+    }
+
+    void RecordTutorialSuccessIfNeeded()
+    {
+        if (countedTutorialSuccessThisRun || currentFloor != 1) return;
+
+        countedTutorialSuccessThisRun = true;
+        int successfulRuns = PlayerPrefs.GetInt(TutorialSuccessfulRunsKey, 0);
+        PlayerPrefs.SetInt(TutorialSuccessfulRunsKey, Mathf.Min(3, successfulRuns + 1));
+        PlayerPrefs.Save();
     }
 
     int CalculateXPToNextLevel(int level)

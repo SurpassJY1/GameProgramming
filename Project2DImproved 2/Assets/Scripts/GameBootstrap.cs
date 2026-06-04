@@ -558,6 +558,7 @@ public class GameBootstrap : MonoBehaviour
         menus.gameOverPage = BuildEndPage(cv.transform, menus, "CAUGHT", new Color(1f, 0.45f, 0.45f), out menus.gameOverText);
         cv.gameObject.AddComponent<UpgradeSelectionUI>().Build(cv.transform);
         cv.gameObject.AddComponent<PassiveUpgradeSelectionUI>().Build(cv.transform);
+        cv.gameObject.AddComponent<TutorialPromptUI>().Build(cv.transform);
     }
 
     GameObject BuildMainPage(Transform parent, Menus menus)
