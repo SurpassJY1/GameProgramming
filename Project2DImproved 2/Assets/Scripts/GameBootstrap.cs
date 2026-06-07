@@ -6,10 +6,23 @@ using UnityEngine.EventSystems;
 public class GameBootstrap : MonoBehaviour
 {
     const int WallLayer = 8;
-    const string PlayerSpritePath = "thirdparty/topdown-shooter/player.png";
-    const string EnemySpritePath = "thirdparty/topdown-shooter/enemy.png";
-    const string WallSpritePath = "thirdparty/topdown-shooter/wall_tile.png";
-    const float TilePixelsPerUnit = 64f;
+    const string PixelCuteBasePath = "generated/pixel-cute-dungeon/selected/";
+    const string PlayerSpritePath = PixelCuteBasePath + "player.png";
+    const string EnemySpritePath = PixelCuteBasePath + "enemy.png";
+    const string FloorSpritePath = PixelCuteBasePath + "floor_tile.png";
+    const string WallSpritePath = PixelCuteBasePath + "wall_tile.png";
+    const string KeySpritePath = PixelCuteBasePath + "key.png";
+    const string ExitSpritePath = PixelCuteBasePath + "exit_gate.png";
+    const string ProjectileSpritePath = PixelCuteBasePath + "projectile.png";
+    const string UiPanelSpritePath = PixelCuteBasePath + "ui_panel.png";
+    const string UiButtonSpritePath = PixelCuteBasePath + "ui_button.png";
+    const string KenneyPlayerSpritePath = "thirdparty/topdown-shooter/player.png";
+    const string KenneyEnemySpritePath = "thirdparty/topdown-shooter/enemy.png";
+    const string KenneyFloorSpritePath = "thirdparty/topdown-shooter/floor_tile.png";
+    const string KenneyWallSpritePath = "thirdparty/topdown-shooter/wall_tile.png";
+    const float PixelTilePixelsPerUnit = 32f;
+    const float PixelActorPixelsPerUnit = 48f;
+    const float KenneyTilePixelsPerUnit = 64f;
     const int BaseEnemyCount = 3;
     const int MaxEnemyCount = 14;
     const int BaseEnemyHealth = 2;
@@ -100,7 +113,7 @@ public class GameBootstrap : MonoBehaviour
         cam.transform.position = new Vector3(0, 0, -10);
         cam.orthographic = true;
         cam.orthographicSize = 5.6f;
-        cam.backgroundColor = new Color(0.05f, 0.06f, 0.08f);
+        cam.backgroundColor = new Color(0.055f, 0.045f, 0.075f);
         cam.clearFlags = CameraClearFlags.SolidColor;
         if (cam.GetComponent<AudioSource>() == null) cam.gameObject.AddComponent<AudioSource>().playOnAwake = false;
         if (cam.GetComponent<CameraShake>() == null) cam.gameObject.AddComponent<CameraShake>();
@@ -111,6 +124,22 @@ public class GameBootstrap : MonoBehaviour
     {
         if (GameManager.I != null) return;
         new GameObject("GameManager").AddComponent<GameManager>();
+    }
+
+    Sprite LoadWorldSprite(string primaryPath, float primaryPixelsPerUnit, string fallbackPath, float fallbackPixelsPerUnit)
+    {
+        return Art2D.FromPngFile(primaryPath, primaryPixelsPerUnit)
+            ?? Art2D.FromPngFile(fallbackPath, fallbackPixelsPerUnit);
+    }
+
+    Sprite LoadPixelSprite(string path, float pixelsPerUnit = PixelActorPixelsPerUnit)
+    {
+        return Art2D.FromPngFile(path, pixelsPerUnit);
+    }
+
+    Sprite LoadUiSprite(string path)
+    {
+        return Art2D.FromPngFile(path, 100f);
     }
 
     void BuildCurrentFloor()
@@ -133,8 +162,11 @@ public class GameBootstrap : MonoBehaviour
         if (playerController != null) playerController.ResetForNewFloor(room.playerStart);
         else if (playerTransform != null) playerTransform.position = room.playerStart;
 
-        Sprite floorSprite = Art2D.Square(new Color(0.13f, 0.13f, 0.16f), 100);
-        Sprite wallSprite = Art2D.FromPngFile(WallSpritePath, TilePixelsPerUnit) ?? Art2D.Square(new Color(0.75f, 0.75f, 0.75f));
+        Sprite floorSprite = LoadWorldSprite(FloorSpritePath, PixelTilePixelsPerUnit, KenneyFloorSpritePath, KenneyTilePixelsPerUnit)
+            ?? Art2D.SoftRectangle(new Color(0.17f, 0.17f, 0.2f), new Color(0.08f, 0.09f, 0.12f), 100, 100);
+        Sprite wallSprite = LoadWorldSprite(WallSpritePath, PixelTilePixelsPerUnit, KenneyWallSpritePath, KenneyTilePixelsPerUnit)
+            ?? Art2D.Square(new Color(0.75f, 0.75f, 0.75f));
+        BuildAmbientBackdrop();
         BuildTiledFloor(floorSprite);
 
         // Perimeter walls.
@@ -247,9 +279,9 @@ public class GameBootstrap : MonoBehaviour
     {
         GameObject root = new GameObject("Dungeon Floor");
         root.transform.SetParent(currentFloorRoot.transform);
-        for (int x = -6; x <= 6; x++)
+        for (int x = -7; x <= 6; x++)
         {
-            for (int y = -4; y <= 4; y++)
+            for (int y = -5; y <= 4; y++)
             {
                 GameObject tile = new GameObject("FloorTile");
                 tile.transform.SetParent(root.transform);
@@ -257,9 +289,30 @@ public class GameBootstrap : MonoBehaviour
                 SpriteRenderer sr = tile.AddComponent<SpriteRenderer>();
                 sr.sprite = floorSprite;
                 sr.sortingOrder = -5;
+                float checker = ((x + y) & 1) == 0 ? 1f : 0.96f;
+                sr.color = new Color(checker, checker, checker, 1f);
                 tile.transform.localScale = Vector3.one;
             }
         }
+    }
+
+    void BuildAmbientBackdrop()
+    {
+        GameObject backdrop = new GameObject("Ambient Backdrop");
+        backdrop.transform.SetParent(currentFloorRoot.transform);
+        backdrop.transform.position = new Vector3(0f, 0f, 0f);
+        backdrop.transform.localScale = new Vector3(15.5f, 10.5f, 1f);
+        SpriteRenderer sr = backdrop.AddComponent<SpriteRenderer>();
+        sr.sprite = Art2D.SoftRectangle(new Color(0.13f, 0.1f, 0.18f), new Color(0.045f, 0.035f, 0.06f), 128, 96);
+        sr.sortingOrder = -8;
+
+        GameObject centerGlow = new GameObject("Center Floor Glow");
+        centerGlow.transform.SetParent(currentFloorRoot.transform);
+        centerGlow.transform.position = new Vector3(0f, 0f, 0f);
+        centerGlow.transform.localScale = new Vector3(9.8f, 5.8f, 1f);
+        SpriteRenderer glow = centerGlow.AddComponent<SpriteRenderer>();
+        glow.sprite = Art2D.SolidCircle(new Color(0.58f, 0.44f, 0.76f, 0.08f), 128);
+        glow.sortingOrder = -7;
     }
 
     void BuildWall(string name, Vector2 pos, Vector2 size, Sprite wallSprite)
@@ -270,6 +323,14 @@ public class GameBootstrap : MonoBehaviour
         wall.transform.position = pos;
         BoxCollider2D collider = wall.AddComponent<BoxCollider2D>();
         collider.size = size;
+
+        GameObject backing = new GameObject("WallBacking");
+        backing.transform.SetParent(wall.transform);
+        backing.transform.localPosition = Vector3.zero;
+        backing.transform.localScale = new Vector3(size.x + 0.08f, size.y + 0.08f, 1f);
+        SpriteRenderer backingRenderer = backing.AddComponent<SpriteRenderer>();
+        backingRenderer.sprite = Art2D.SoftRectangle(new Color(0.18f, 0.13f, 0.25f), new Color(0.08f, 0.06f, 0.12f), 100, 100);
+        backingRenderer.sortingOrder = -2;
 
         // Build wall visuals from tiled sprites so walls stay crisp and readable.
         int xTiles = Mathf.Max(1, Mathf.CeilToInt(size.x));
@@ -300,8 +361,9 @@ public class GameBootstrap : MonoBehaviour
         GameObject go = new GameObject("Player");
         go.transform.position = new Vector3(-5.6f, -3.2f, 0f);
         go.transform.localScale = Vector3.one * 0.9f;
+        AddShadow(go.transform, new Vector2(0f, -0.34f), new Vector3(0.95f, 0.34f, 1f), -0.02f);
         SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
-        sr.sprite = Art2D.FromPngFile(PlayerSpritePath, 100f)
+        sr.sprite = LoadWorldSprite(PlayerSpritePath, PixelActorPixelsPerUnit, KenneyPlayerSpritePath, 100f)
             ?? Art2D.SolidCircle(new Color(0.45f, 0.95f, 0.55f));
         sr.sortingOrder = 3;
         CircleCollider2D col = go.AddComponent<CircleCollider2D>();
@@ -332,10 +394,10 @@ public class GameBootstrap : MonoBehaviour
     {
         GameObject bullet = new GameObject("Player Bullet Prefab");
         bullet.SetActive(false);
-        bullet.transform.localScale = Vector3.one * 0.18f;
+        bullet.transform.localScale = new Vector3(0.58f, 0.42f, 1f);
 
         SpriteRenderer sr = bullet.AddComponent<SpriteRenderer>();
-        sr.sprite = Art2D.SolidCircle(new Color(1f, 0.82f, 0.25f), 32);
+        sr.sprite = LoadPixelSprite(ProjectileSpritePath, 64f) ?? Art2D.Projectile();
         sr.sortingOrder = 4;
 
         CircleCollider2D collider = bullet.AddComponent<CircleCollider2D>();
@@ -358,8 +420,9 @@ public class GameBootstrap : MonoBehaviour
         Vector2 safePos = ResolveFreeCirclePosition(position, 0.3f);
         key.transform.position = new Vector3(safePos.x, safePos.y, 0f);
         key.transform.localScale = Vector3.one * 0.45f;
+        AddGlow(key.transform, new Color(1f, 0.76f, 0.16f, 0.28f), new Vector3(2.2f, 2.2f, 1f), 0);
         SpriteRenderer sr = key.AddComponent<SpriteRenderer>();
-        sr.sprite = Art2D.Diamond(new Color(1f, 0.78f, 0.16f));
+        sr.sprite = LoadPixelSprite(KeySpritePath) ?? Art2D.Key();
         sr.sortingOrder = 2;
         CircleCollider2D col = key.AddComponent<CircleCollider2D>();
         col.isTrigger = true;
@@ -374,8 +437,9 @@ public class GameBootstrap : MonoBehaviour
         Vector2 safePos = ResolveFreeBoxPosition(position, new Vector2(0.9f, 1.2f));
         exit.transform.position = new Vector3(safePos.x, safePos.y, 0f);
         exit.transform.localScale = new Vector3(0.9f, 1.2f, 1f);
+        AddGlow(exit.transform, new Color(0.12f, 0.72f, 1f, 0.22f), new Vector3(2.4f, 2.2f, 1f), 0);
         SpriteRenderer sr = exit.AddComponent<SpriteRenderer>();
-        sr.sprite = Art2D.Square(new Color(0.25f, 0.35f, 0.55f));
+        sr.sprite = LoadPixelSprite(ExitSpritePath) ?? Art2D.ExitGate();
         sr.sortingOrder = 1;
         BoxCollider2D col = exit.AddComponent<BoxCollider2D>();
         col.isTrigger = true;
@@ -416,8 +480,9 @@ public class GameBootstrap : MonoBehaviour
         enemy.transform.SetParent(currentFloorRoot.transform);
         enemy.transform.position = a;
         enemy.transform.localScale = Vector3.one * 0.9f;
+        AddShadow(enemy.transform, new Vector2(0f, -0.34f), new Vector3(0.95f, 0.34f, 1f), -0.02f);
         SpriteRenderer sr = enemy.AddComponent<SpriteRenderer>();
-        sr.sprite = Art2D.FromPngFile(EnemySpritePath, 100f)
+        sr.sprite = LoadWorldSprite(EnemySpritePath, PixelActorPixelsPerUnit, KenneyEnemySpritePath, 100f)
             ?? Art2D.Diamond(new Color(0.92f, 0.25f, 0.25f));
         sr.sortingOrder = 2;
         CircleCollider2D col = enemy.AddComponent<CircleCollider2D>();
@@ -432,6 +497,28 @@ public class GameBootstrap : MonoBehaviour
         guard.pointB = b;
         guard.wallMask = 1 << WallLayer;
         ApplyEnemyScaling(guard, floor);
+    }
+
+    void AddShadow(Transform parent, Vector2 offset, Vector3 scale, float zOffset)
+    {
+        GameObject shadow = new GameObject("Shadow");
+        shadow.transform.SetParent(parent, false);
+        shadow.transform.localPosition = new Vector3(offset.x, offset.y, zOffset);
+        shadow.transform.localScale = scale;
+        SpriteRenderer sr = shadow.AddComponent<SpriteRenderer>();
+        sr.sprite = Art2D.SolidCircle(new Color(0f, 0f, 0f, 0.34f), 64);
+        sr.sortingOrder = -2;
+    }
+
+    void AddGlow(Transform parent, Color color, Vector3 scale, int sortingOrder)
+    {
+        GameObject glow = new GameObject("Glow");
+        glow.transform.SetParent(parent, false);
+        glow.transform.localPosition = Vector3.zero;
+        glow.transform.localScale = scale;
+        SpriteRenderer sr = glow.AddComponent<SpriteRenderer>();
+        sr.sprite = Art2D.SolidCircle(color, 96);
+        sr.sortingOrder = sortingOrder;
     }
 
     void ApplyEnemyScaling(Enemy enemy, int floor)
@@ -500,6 +587,10 @@ public class GameBootstrap : MonoBehaviour
         Canvas cv = MakeCanvas("HUDCanvas", 0);
         HUD hud = cv.gameObject.AddComponent<HUD>();
         hud.root = cv.gameObject;
+        MakeUiImage(cv.transform, "HudPanel", new Vector2(16, -16), new Vector2(0, 1), new Vector2(545, 350), new Color(0.85f, 0.9f, 1f, 0.92f), UiPanelSpritePath);
+        MakeUiImage(cv.transform, "HudAccent", new Vector2(16, -16), new Vector2(0, 1), new Vector2(5, 350), new Color(0.28f, 0.82f, 1f, 0.92f));
+        MakeUiImage(cv.transform, "TimerPanel", new Vector2(-16, -16), new Vector2(1, 1), new Vector2(245, 62), new Color(0.85f, 0.9f, 1f, 0.92f), UiPanelSpritePath);
+        MakeUiImage(cv.transform, "ObjectivePanel", new Vector2(0, 18), new Vector2(0.5f, 0), new Vector2(760, 52), new Color(0.85f, 0.9f, 1f, 0.86f), UiPanelSpritePath);
         hud.floorText = MakeText(cv.transform, "Floor: 1", new Vector2(20, -20), new Vector2(0, 1), 30, TextAnchor.UpperLeft, new Color(0.72f, 0.95f, 1f));
         hud.livesText = MakeText(cv.transform, "Lives: 3", new Vector2(20, -58), new Vector2(0, 1), 26, TextAnchor.UpperLeft, Color.white);
         hud.keyText = MakeText(cv.transform, "Key: Missing", new Vector2(20, -94), new Vector2(0, 1), 24, TextAnchor.UpperLeft, new Color(1f, 0.9f, 0.45f));
@@ -514,6 +605,20 @@ public class GameBootstrap : MonoBehaviour
         hud.timerText = MakeText(cv.transform, "Time: 0s", new Vector2(-20, -20), new Vector2(1, 1), 28, TextAnchor.UpperRight, Color.white);
         hud.objectiveText = MakeText(cv.transform, "", new Vector2(0, 30), new Vector2(0.5f, 0), 24, TextAnchor.LowerCenter, new Color(0.85f, 0.9f, 1f));
         MakeText(cv.transform, "ESC = pause", new Vector2(-20, 30), new Vector2(1, 0), 18, TextAnchor.LowerRight, new Color(1, 1, 1, 0.55f));
+    }
+
+    Image MakeUiImage(Transform parent, string name, Vector2 pos, Vector2 anchor, Vector2 size, Color color, string spritePath = null)
+    {
+        GameObject go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        RectTransform rt = go.AddComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = rt.pivot = anchor;
+        rt.anchoredPosition = pos;
+        rt.sizeDelta = size;
+        Image image = go.AddComponent<Image>();
+        image.color = color;
+        if (!string.IsNullOrEmpty(spritePath)) image.sprite = LoadUiSprite(spritePath);
+        return image;
     }
 
     Image MakeHudBar(Transform parent, Vector2 pos, Vector2 size, Color backgroundColor, Color fillColor)
@@ -551,7 +656,7 @@ public class GameBootstrap : MonoBehaviour
             "Move: WASD or arrow keys\nPause: ESC\n\nGoal: collect the gold key, then reach the blue exit door.\nAvoid red guards. They patrol and chase if you get too close.",
             menus.OnBackToMenu);
         menus.creditsPage = BuildInfoPage(cv.transform, "Credits",
-            "Code and gameplay logic are original for this module project.\nAudio and fallback visuals are generated in Art2D.cs.\nPlayer and guard sprites use free CC0 assets credited in README.",
+            "Code, audio, and the cute pixel visual set are generated for this module project.\nKenney CC0 sprites remain as documented fallback assets in README.",
             menus.OnBackToMenu);
         menus.pausePage = BuildPausePage(cv.transform, menus);
         menus.winPage = BuildEndPage(cv.transform, menus, "ESCAPED", new Color(0.45f, 1f, 0.65f), out menus.winText);
@@ -563,7 +668,9 @@ public class GameBootstrap : MonoBehaviour
 
     GameObject BuildMainPage(Transform parent, Menus menus)
     {
-        GameObject page = MakePagePanel(parent, "MainPage", new Color(0, 0, 0, 0.65f));
+        GameObject page = MakePagePanel(parent, "MainPage", new Color(0.03f, 0.02f, 0.05f, 0.72f));
+        MakeUiImage(page.transform, "TitleRuleTop", new Vector2(0, 292), new Vector2(0.5f, 0.5f), new Vector2(760, 4), new Color(0.28f, 0.82f, 1f, 0.68f));
+        MakeUiImage(page.transform, "TitleRuleBottom", new Vector2(0, 108), new Vector2(0.5f, 0.5f), new Vector2(760, 4), new Color(1f, 0.72f, 0.18f, 0.7f));
         MakeText(page.transform, "DUNGEON KEY RUN", new Vector2(0, 220), new Vector2(0.5f, 0.5f), 72, TextAnchor.MiddleCenter, new Color(1f, 0.86f, 0.35f));
         MakeText(page.transform, "Find the key. Avoid the guards. Escape the dungeon.", new Vector2(0, 145), new Vector2(0.5f, 0.5f), 26, TextAnchor.MiddleCenter, Color.white);
         MakeButton(page.transform, "Start Game", new Vector2(0, 40), menus.OnStart);
@@ -575,7 +682,8 @@ public class GameBootstrap : MonoBehaviour
 
     GameObject BuildInfoPage(Transform parent, string title, string body, UnityEngine.Events.UnityAction back)
     {
-        GameObject page = MakePagePanel(parent, title + "Page", new Color(0, 0, 0, 0.72f));
+        GameObject page = MakePagePanel(parent, title + "Page", new Color(0.03f, 0.02f, 0.05f, 0.76f));
+        MakeUiImage(page.transform, "InfoPanel", new Vector2(0, 5), new Vector2(0.5f, 0.5f), new Vector2(980, 430), new Color(0.85f, 0.9f, 1f, 0.92f), UiPanelSpritePath);
         MakeText(page.transform, title, new Vector2(0, 220), new Vector2(0.5f, 0.5f), 56, TextAnchor.MiddleCenter, new Color(1f, 0.86f, 0.35f));
         Text text = MakeText(page.transform, body, new Vector2(0, 20), new Vector2(0.5f, 0.5f), 28, TextAnchor.MiddleCenter, Color.white);
         text.GetComponent<RectTransform>().sizeDelta = new Vector2(900, 360);
@@ -586,7 +694,8 @@ public class GameBootstrap : MonoBehaviour
 
     GameObject BuildPausePage(Transform parent, Menus menus)
     {
-        GameObject page = MakePagePanel(parent, "PausePage", new Color(0, 0, 0, 0.72f));
+        GameObject page = MakePagePanel(parent, "PausePage", new Color(0.03f, 0.02f, 0.05f, 0.76f));
+        MakeUiImage(page.transform, "PausePanel", new Vector2(0, 10), new Vector2(0.5f, 0.5f), new Vector2(520, 450), new Color(0.85f, 0.9f, 1f, 0.92f), UiPanelSpritePath);
         MakeText(page.transform, "PAUSED", new Vector2(0, 180), new Vector2(0.5f, 0.5f), 68, TextAnchor.MiddleCenter, Color.white);
         MakeButton(page.transform, "Resume", new Vector2(0, 40), menus.OnResume);
         MakeButton(page.transform, "Restart", new Vector2(0, -40), menus.OnRestart);
@@ -597,7 +706,8 @@ public class GameBootstrap : MonoBehaviour
 
     GameObject BuildEndPage(Transform parent, Menus menus, string title, Color titleColor, out Text resultText)
     {
-        GameObject page = MakePagePanel(parent, title + "Page", new Color(0, 0, 0, 0.78f));
+        GameObject page = MakePagePanel(parent, title + "Page", new Color(0.03f, 0.02f, 0.05f, 0.8f));
+        MakeUiImage(page.transform, "ResultPanel", new Vector2(0, 20), new Vector2(0.5f, 0.5f), new Vector2(980, 520), new Color(0.85f, 0.9f, 1f, 0.92f), UiPanelSpritePath);
         MakeText(page.transform, title, new Vector2(0, 195), new Vector2(0.5f, 0.5f), 76, TextAnchor.MiddleCenter, titleColor);
         resultText = MakeText(page.transform, "", new Vector2(0, 70), new Vector2(0.5f, 0.5f), 30, TextAnchor.MiddleCenter, Color.white);
         resultText.GetComponent<RectTransform>().sizeDelta = new Vector2(900, 120);
@@ -628,7 +738,8 @@ public class GameBootstrap : MonoBehaviour
         rt.anchorMin = Vector2.zero;
         rt.anchorMax = Vector2.one;
         rt.offsetMin = rt.offsetMax = Vector2.zero;
-        panel.AddComponent<Image>().color = bg;
+        Image image = panel.AddComponent<Image>();
+        image.color = bg;
         return panel;
     }
 
@@ -659,9 +770,19 @@ public class GameBootstrap : MonoBehaviour
         rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
         rt.anchoredPosition = pos;
         rt.sizeDelta = new Vector2(360, 70);
-        go.AddComponent<Image>().color = new Color(0.18f, 0.33f, 0.7f, 0.95f);
+        Image image = go.AddComponent<Image>();
+        image.color = new Color(0.92f, 0.96f, 1f, 1f);
+        image.sprite = LoadUiSprite(UiButtonSpritePath);
         Button button = go.AddComponent<Button>();
+        ColorBlock colors = button.colors;
+        colors.normalColor = new Color(0.92f, 0.96f, 1f, 1f);
+        colors.highlightedColor = new Color(1f, 1f, 1f, 1f);
+        colors.pressedColor = new Color(0.72f, 0.82f, 1f, 1f);
+        colors.selectedColor = colors.highlightedColor;
+        button.colors = colors;
         button.onClick.AddListener(onClick);
+
+        MakeUiImage(go.transform, "BtnAccent", new Vector2(0, -31), new Vector2(0.5f, 0.5f), new Vector2(320, 3), new Color(1f, 0.8f, 0.25f, 0.72f));
 
         GameObject labelGo = new GameObject("Text");
         labelGo.transform.SetParent(go.transform, false);
