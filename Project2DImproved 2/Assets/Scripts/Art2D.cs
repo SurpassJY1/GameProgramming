@@ -306,6 +306,103 @@ public static class Art2D
             new Vector2(0.5f, 0.5f), 100f);
     }
 
+    public static Sprite EnemySprite(EnemyKind kind, int size = 96)
+    {
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Point;
+
+        EnemyPalette(kind, out Color body, out Color shade, out Color accent, out Color eye);
+
+        for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++)
+        {
+            float u = (x + 0.5f) / size;
+            float v = (y + 0.5f) / size;
+            Color pixel = Color.clear;
+
+            bool main = false;
+            bool detail = false;
+            bool eyes = false;
+
+            switch (kind)
+            {
+                case EnemyKind.SlimeScout:
+                    main = Ellipse(u, v, 0.5f, 0.4f, 0.34f, 0.24f) || Ellipse(u, v, 0.5f, 0.58f, 0.27f, 0.2f);
+                    detail = v < 0.32f && main;
+                    eyes = EyePair(u, v, 0.42f, 0.55f, 0.58f, 0.55f, 0.035f);
+                    break;
+                case EnemyKind.TinyBat:
+                    main = Ellipse(u, v, 0.5f, 0.5f, 0.18f, 0.2f) ||
+                        TriangleLeft(u, v, 0.28f, 0.5f, 0.34f, 0.24f) ||
+                        TriangleRight(u, v, 0.72f, 0.5f, 0.34f, 0.24f);
+                    detail = TriangleUp(u, v, 0.5f, 0.74f, 0.18f, 0.18f);
+                    eyes = EyePair(u, v, 0.45f, 0.54f, 0.55f, 0.54f, 0.026f);
+                    break;
+                case EnemyKind.ShieldGuard:
+                    main = RoundedBox(u, v, 0.5f, 0.47f, 0.27f, 0.32f) || TriangleUp(u, v, 0.5f, 0.77f, 0.3f, 0.22f);
+                    detail = RoundedBox(u, v, 0.5f, 0.48f, 0.19f, 0.23f);
+                    eyes = EyePair(u, v, 0.43f, 0.58f, 0.57f, 0.58f, 0.025f);
+                    break;
+                case EnemyKind.SparkSpitter:
+                    main = Ellipse(u, v, 0.5f, 0.49f, 0.27f, 0.28f);
+                    detail = TriangleRight(u, v, 0.69f, 0.52f, 0.2f, 0.18f) || Star(u, v, 0.34f, 0.72f, 0.13f);
+                    eyes = EyePair(u, v, 0.43f, 0.55f, 0.55f, 0.55f, 0.025f);
+                    break;
+                case EnemyKind.BombSprite:
+                    main = Ellipse(u, v, 0.5f, 0.42f, 0.3f, 0.28f);
+                    detail = Capsule(u, v, 0.48f, 0.7f, 0.62f, 0.86f, 0.035f) || Star(u, v, 0.66f, 0.86f, 0.08f);
+                    eyes = EyePair(u, v, 0.42f, 0.47f, 0.58f, 0.47f, 0.03f);
+                    break;
+                case EnemyKind.FrostWisp:
+                    main = Ellipse(u, v, 0.5f, 0.52f, 0.25f, 0.3f) || TriangleDown(u, v, 0.5f, 0.2f, 0.22f, 0.22f);
+                    detail = Capsule(u, v, 0.32f, 0.52f, 0.68f, 0.52f, 0.025f) || Capsule(u, v, 0.5f, 0.34f, 0.5f, 0.74f, 0.025f);
+                    eyes = EyePair(u, v, 0.44f, 0.58f, 0.56f, 0.58f, 0.023f);
+                    break;
+                case EnemyKind.DashImp:
+                    main = Ellipse(u, v, 0.5f, 0.45f, 0.24f, 0.27f) ||
+                        TriangleUp(u, v, 0.33f, 0.75f, 0.15f, 0.2f) ||
+                        TriangleUp(u, v, 0.67f, 0.75f, 0.15f, 0.2f);
+                    detail = Capsule(u, v, 0.24f, 0.34f, 0.76f, 0.34f, 0.035f);
+                    eyes = EyePair(u, v, 0.43f, 0.52f, 0.57f, 0.52f, 0.028f);
+                    break;
+                case EnemyKind.HealerFairy:
+                    main = Ellipse(u, v, 0.5f, 0.47f, 0.18f, 0.23f) ||
+                        Ellipse(u, v, 0.3f, 0.58f, 0.14f, 0.2f) ||
+                        Ellipse(u, v, 0.7f, 0.58f, 0.14f, 0.2f);
+                    detail = Capsule(u, v, 0.5f, 0.35f, 0.5f, 0.62f, 0.025f) || Capsule(u, v, 0.39f, 0.49f, 0.61f, 0.49f, 0.025f);
+                    eyes = EyePair(u, v, 0.45f, 0.53f, 0.55f, 0.53f, 0.02f);
+                    break;
+                case EnemyKind.SummonerShade:
+                    main = Ellipse(u, v, 0.5f, 0.5f, 0.26f, 0.32f) || TriangleDown(u, v, 0.5f, 0.18f, 0.28f, 0.28f);
+                    detail = Capsule(u, v, 0.28f, 0.7f, 0.72f, 0.7f, 0.025f);
+                    eyes = EyePair(u, v, 0.43f, 0.56f, 0.57f, 0.56f, 0.027f);
+                    break;
+                case EnemyKind.CrystalBrute:
+                    main = Mathf.Abs(u - 0.5f) + Mathf.Abs(v - 0.5f) < 0.38f ||
+                        TriangleUp(u, v, 0.34f, 0.78f, 0.16f, 0.18f) ||
+                        TriangleUp(u, v, 0.66f, 0.78f, 0.16f, 0.18f);
+                    detail = Mathf.Abs(u - 0.5f) < 0.045f || Mathf.Abs(v - 0.5f) < 0.045f;
+                    eyes = EyePair(u, v, 0.43f, 0.58f, 0.57f, 0.58f, 0.026f);
+                    break;
+            }
+
+            if (main)
+            {
+                float highlight = Mathf.Clamp01(v * 0.75f + (1f - u) * 0.18f);
+                pixel = Color.Lerp(shade, body, highlight);
+            }
+
+            if (detail) pixel = Color.Lerp(pixel.a > 0f ? pixel : shade, accent, 0.85f);
+            if (eyes) pixel = eye;
+
+            tex.SetPixel(x, y, pixel);
+        }
+
+        tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, size, size),
+            new Vector2(0.5f, 0.5f), 100f);
+    }
+
     static bool Capsule(float u, float v, float ax, float ay, float bx, float by, float radius)
     {
         Vector2 p = new Vector2(u, v);
@@ -316,11 +413,101 @@ public static class Art2D
         return Vector2.Distance(p, a + ab * t) < radius;
     }
 
+    static void EnemyPalette(EnemyKind kind, out Color body, out Color shade, out Color accent, out Color eye)
+    {
+        eye = new Color(0.07f, 0.06f, 0.09f, 1f);
+        switch (kind)
+        {
+            case EnemyKind.TinyBat:
+                body = new Color(0.52f, 0.42f, 0.9f, 1f);
+                shade = new Color(0.26f, 0.2f, 0.48f, 1f);
+                accent = new Color(0.88f, 0.76f, 1f, 1f);
+                break;
+            case EnemyKind.ShieldGuard:
+                body = new Color(0.78f, 0.78f, 0.86f, 1f);
+                shade = new Color(0.32f, 0.36f, 0.48f, 1f);
+                accent = new Color(0.42f, 0.72f, 1f, 1f);
+                break;
+            case EnemyKind.SparkSpitter:
+                body = new Color(1f, 0.74f, 0.2f, 1f);
+                shade = new Color(0.54f, 0.25f, 0.08f, 1f);
+                accent = new Color(1f, 0.95f, 0.45f, 1f);
+                break;
+            case EnemyKind.BombSprite:
+                body = new Color(0.35f, 0.32f, 0.38f, 1f);
+                shade = new Color(0.1f, 0.09f, 0.13f, 1f);
+                accent = new Color(1f, 0.42f, 0.12f, 1f);
+                eye = new Color(1f, 0.72f, 0.22f, 1f);
+                break;
+            case EnemyKind.FrostWisp:
+                body = new Color(0.58f, 0.92f, 1f, 1f);
+                shade = new Color(0.18f, 0.38f, 0.68f, 1f);
+                accent = new Color(0.9f, 1f, 1f, 1f);
+                break;
+            case EnemyKind.DashImp:
+                body = new Color(1f, 0.36f, 0.36f, 1f);
+                shade = new Color(0.48f, 0.08f, 0.12f, 1f);
+                accent = new Color(1f, 0.86f, 0.24f, 1f);
+                break;
+            case EnemyKind.HealerFairy:
+                body = new Color(0.68f, 1f, 0.72f, 1f);
+                shade = new Color(0.22f, 0.52f, 0.32f, 1f);
+                accent = new Color(1f, 0.95f, 0.58f, 1f);
+                break;
+            case EnemyKind.SummonerShade:
+                body = new Color(0.46f, 0.32f, 0.72f, 1f);
+                shade = new Color(0.12f, 0.08f, 0.24f, 1f);
+                accent = new Color(0.92f, 0.64f, 1f, 1f);
+                eye = new Color(0.9f, 0.72f, 1f, 1f);
+                break;
+            case EnemyKind.CrystalBrute:
+                body = new Color(0.5f, 0.9f, 1f, 1f);
+                shade = new Color(0.12f, 0.28f, 0.48f, 1f);
+                accent = new Color(0.94f, 1f, 1f, 1f);
+                break;
+            default:
+                body = new Color(0.56f, 1f, 0.48f, 1f);
+                shade = new Color(0.2f, 0.55f, 0.24f, 1f);
+                accent = new Color(0.86f, 1f, 0.54f, 1f);
+                break;
+        }
+    }
+
+    static bool Ellipse(float u, float v, float cx, float cy, float rx, float ry)
+    {
+        float x = (u - cx) / rx;
+        float y = (v - cy) / ry;
+        return x * x + y * y < 1f;
+    }
+
+    static bool RoundedBox(float u, float v, float cx, float cy, float hx, float hy)
+    {
+        return Mathf.Abs(u - cx) < hx && Mathf.Abs(v - cy) < hy;
+    }
+
+    static bool EyePair(float u, float v, float ax, float ay, float bx, float by, float r)
+    {
+        return Ellipse(u, v, ax, ay, r, r * 1.2f) || Ellipse(u, v, bx, by, r, r * 1.2f);
+    }
+
+    static bool Star(float u, float v, float cx, float cy, float radius)
+    {
+        float angle = Mathf.Atan2(v - cy, u - cx);
+        float distance = Vector2.Distance(new Vector2(u, v), new Vector2(cx, cy));
+        float edge = radius * (0.72f + 0.28f * Mathf.Sin(angle * 5f));
+        return distance < edge;
+    }
+
     static bool TriangleRight(float u, float v, float cx, float cy, float width, float height)
     {
         float x = (u - cx) / width;
         float y = Mathf.Abs(v - cy) / height;
         return x >= -0.5f && x <= 0.5f && y <= x + 0.5f;
+    }
+
+    static bool TriangleLeft(float u, float v, float cx, float cy, float width, float height)
+    {
+        return TriangleRight(1f - u, v, 1f - cx, cy, width, height);
     }
 
     static bool TriangleUp(float u, float v, float cx, float cy, float width, float height)
