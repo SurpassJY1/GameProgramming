@@ -83,6 +83,260 @@ public static class Art2D
             new Vector2(0.5f, 0.5f), 100f);
     }
 
+    public static Sprite SoftRectangle(Color center, Color edge, int width = 96, int height = 96)
+    {
+        var tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Bilinear;
+        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+        {
+            float u = (x + 0.5f) / width;
+            float v = (y + 0.5f) / height;
+            float edgeDistance = Mathf.Min(Mathf.Min(u, 1f - u), Mathf.Min(v, 1f - v)) * 2f;
+            float shade = Mathf.Clamp01(edgeDistance);
+            tex.SetPixel(x, y, Color.Lerp(edge, center, shade));
+        }
+        tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, width, height),
+            new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    public static Sprite Projectile(int width = 96, int height = 32)
+    {
+        var tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Bilinear;
+        Vector2 center = new Vector2(width * 0.5f, height * 0.5f);
+        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+        {
+            float nx = Mathf.Abs((x - center.x) / (width * 0.5f));
+            float ny = Mathf.Abs((y - center.y) / (height * 0.5f));
+            float core = Mathf.Clamp01(1f - Mathf.Pow(nx, 2.2f) - Mathf.Pow(ny, 2.8f));
+            float glow = Mathf.Clamp01(1f - nx * 0.8f - ny * 1.6f);
+            Color color = Color.Lerp(new Color(1f, 0.45f, 0.08f, 0f), new Color(1f, 0.78f, 0.18f, 0.65f), glow);
+            color = Color.Lerp(color, new Color(1f, 0.96f, 0.55f, 1f), core);
+            color.a *= Mathf.Max(core, glow * 0.65f);
+            tex.SetPixel(x, y, color);
+        }
+        tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, width, height),
+            new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    public static Sprite Key(int size = 96)
+    {
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Bilinear;
+        Color gold = new Color(1f, 0.74f, 0.14f, 1f);
+        Color bright = new Color(1f, 0.95f, 0.45f, 1f);
+        Color dark = new Color(0.64f, 0.32f, 0.05f, 1f);
+
+        for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++)
+        {
+            Vector2 p = new Vector2(x, y);
+            float ring = Mathf.Abs(Vector2.Distance(p, new Vector2(size * 0.33f, size * 0.58f)) - size * 0.16f);
+            bool bow = ring < size * 0.055f;
+            bool shaft = x > size * 0.42f && x < size * 0.78f && Mathf.Abs(y - size * 0.55f) < size * 0.045f;
+            bool toothA = x > size * 0.68f && x < size * 0.76f && y > size * 0.38f && y < size * 0.56f;
+            bool toothB = x > size * 0.78f && x < size * 0.86f && y > size * 0.45f && y < size * 0.56f;
+            if (bow || shaft || toothA || toothB)
+            {
+                float highlight = Mathf.Clamp01((float)y / size + (1f - (float)x / size) * 0.45f);
+                tex.SetPixel(x, y, Color.Lerp(dark, Color.Lerp(gold, bright, highlight), 0.84f));
+            }
+            else tex.SetPixel(x, y, Color.clear);
+        }
+        tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, size, size),
+            new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    public static Sprite ExitGate(int width = 96, int height = 128)
+    {
+        var tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Bilinear;
+        Color frame = new Color(0.18f, 0.25f, 0.36f, 1f);
+        Color frameLight = new Color(0.48f, 0.63f, 0.78f, 1f);
+        Color portal = new Color(0.12f, 0.78f, 1f, 1f);
+        Color portalDark = new Color(0.04f, 0.14f, 0.26f, 1f);
+
+        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+        {
+            float u = (float)x / width;
+            float v = (float)y / height;
+            bool outer = x < width * 0.12f || x > width * 0.88f || y < height * 0.08f || y > height * 0.9f;
+            bool inner = x > width * 0.22f && x < width * 0.78f && y > height * 0.16f && y < height * 0.78f;
+            if (outer)
+            {
+                tex.SetPixel(x, y, Color.Lerp(frame, frameLight, Mathf.Clamp01(v * 0.7f + (1f - u) * 0.2f)));
+            }
+            else if (inner)
+            {
+                float swirl = Mathf.Sin((u * 7f + v * 5f) * Mathf.PI) * 0.5f + 0.5f;
+                tex.SetPixel(x, y, Color.Lerp(portalDark, portal, Mathf.Clamp01(v * 0.6f + swirl * 0.35f)));
+            }
+            else tex.SetPixel(x, y, new Color(0.03f, 0.05f, 0.08f, 0.72f));
+        }
+        tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, width, height),
+            new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    public static Sprite WeaponUpgradeIcon(WeaponUpgradeKind upgrade, int size = 96)
+    {
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Bilinear;
+        Color clear = Color.clear;
+        Color gold = new Color(1f, 0.82f, 0.18f, 1f);
+        Color orange = new Color(1f, 0.36f, 0.08f, 1f);
+        Color cyan = new Color(0.35f, 0.9f, 1f, 1f);
+        Color blue = new Color(0.26f, 0.52f, 1f, 1f);
+        Color white = new Color(1f, 0.96f, 0.72f, 1f);
+
+        for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++)
+        {
+            float u = (x + 0.5f) / size;
+            float v = (y + 0.5f) / size;
+            Color pixel = clear;
+
+            switch (upgrade)
+            {
+                case WeaponUpgradeKind.ExtraProjectile:
+                    if (Capsule(u, v, 0.2f, 0.62f, 0.72f, 0.62f, 0.055f) ||
+                        Capsule(u, v, 0.16f, 0.48f, 0.68f, 0.48f, 0.055f) ||
+                        Capsule(u, v, 0.2f, 0.34f, 0.72f, 0.34f, 0.055f))
+                        pixel = Color.Lerp(orange, white, u);
+                    break;
+                case WeaponUpgradeKind.RapidFire:
+                    if (Capsule(u, v, 0.15f, 0.68f, 0.82f, 0.68f, 0.035f) ||
+                        Capsule(u, v, 0.08f, 0.5f, 0.78f, 0.5f, 0.035f) ||
+                        Capsule(u, v, 0.2f, 0.32f, 0.88f, 0.32f, 0.035f))
+                        pixel = Color.Lerp(gold, white, u);
+                    break;
+                case WeaponUpgradeKind.DamageUp:
+                    if (Mathf.Abs(u - 0.5f) + Mathf.Abs(v - 0.5f) < 0.3f)
+                        pixel = Color.Lerp(orange, gold, v);
+                    if (Mathf.Abs(u - 0.5f) < 0.055f || Mathf.Abs(v - 0.5f) < 0.055f)
+                        pixel = white;
+                    break;
+                case WeaponUpgradeKind.PiercingShot:
+                    if (Capsule(u, v, 0.12f, 0.5f, 0.72f, 0.5f, 0.055f) ||
+                        TriangleRight(u, v, 0.68f, 0.5f, 0.18f, 0.24f))
+                        pixel = Color.Lerp(cyan, white, u);
+                    break;
+                case WeaponUpgradeKind.BurnShot:
+                    if (Mathf.Pow((u - 0.5f) / 0.22f, 2f) + Mathf.Pow((v - 0.38f) / 0.32f, 2f) < 1f ||
+                        TriangleUp(u, v, 0.5f, 0.74f, 0.42f, 0.52f))
+                        pixel = Color.Lerp(orange, gold, v);
+                    break;
+                case WeaponUpgradeKind.SlowShot:
+                    if (Capsule(u, v, 0.22f, 0.5f, 0.78f, 0.5f, 0.028f) ||
+                        Capsule(u, v, 0.5f, 0.22f, 0.5f, 0.78f, 0.028f) ||
+                        Capsule(u, v, 0.3f, 0.3f, 0.7f, 0.7f, 0.028f) ||
+                        Capsule(u, v, 0.7f, 0.3f, 0.3f, 0.7f, 0.028f))
+                        pixel = Color.Lerp(blue, cyan, v);
+                    break;
+                case WeaponUpgradeKind.ExplosiveShot:
+                    float burst = Mathf.Abs(u - 0.5f) + Mathf.Abs(v - 0.5f);
+                    if (burst < 0.36f && Mathf.Sin(Mathf.Atan2(v - 0.5f, u - 0.5f) * 6f) + 1.5f > burst * 5f)
+                        pixel = Color.Lerp(orange, gold, 1f - burst);
+                    break;
+            }
+
+            tex.SetPixel(x, y, pixel);
+        }
+
+        tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, size, size),
+            new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    public static Sprite PassiveUpgradeIcon(PassiveUpgradeKind upgrade, int size = 96)
+    {
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Bilinear;
+        Color clear = Color.clear;
+        Color green = new Color(0.5f, 1f, 0.68f, 1f);
+        Color cyan = new Color(0.42f, 0.92f, 1f, 1f);
+        Color red = new Color(1f, 0.28f, 0.32f, 1f);
+        Color gold = new Color(1f, 0.82f, 0.18f, 1f);
+        Color white = new Color(0.92f, 1f, 0.92f, 1f);
+
+        for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++)
+        {
+            float u = (x + 0.5f) / size;
+            float v = (y + 0.5f) / size;
+            Color pixel = clear;
+
+            switch (upgrade)
+            {
+                case PassiveUpgradeKind.MaxLivesUp:
+                    bool left = Mathf.Pow((u - 0.38f) / 0.15f, 2f) + Mathf.Pow((v - 0.6f) / 0.15f, 2f) < 1f;
+                    bool right = Mathf.Pow((u - 0.62f) / 0.15f, 2f) + Mathf.Pow((v - 0.6f) / 0.15f, 2f) < 1f;
+                    if (left || right || TriangleDown(u, v, 0.5f, 0.28f, 0.48f, 0.42f)) pixel = red;
+                    break;
+                case PassiveUpgradeKind.MoveSpeedUp:
+                    if (Capsule(u, v, 0.28f, 0.34f, 0.68f, 0.34f, 0.07f) ||
+                        Capsule(u, v, 0.42f, 0.34f, 0.62f, 0.65f, 0.055f) ||
+                        Capsule(u, v, 0.36f, 0.62f, 0.72f, 0.62f, 0.045f))
+                        pixel = Color.Lerp(green, white, u);
+                    break;
+                case PassiveUpgradeKind.FireCooldownBonus:
+                    if (TriangleDown(u, v, 0.48f, 0.2f, 0.34f, 0.38f) ||
+                        TriangleUp(u, v, 0.52f, 0.8f, 0.34f, 0.48f))
+                        pixel = Color.Lerp(cyan, white, v);
+                    break;
+                case PassiveUpgradeKind.XPBonus:
+                    float a = Mathf.Atan2(v - 0.5f, u - 0.5f);
+                    float r = Vector2.Distance(new Vector2(u, v), new Vector2(0.5f, 0.5f));
+                    float star = 0.24f + 0.08f * Mathf.Sin(a * 5f);
+                    if (r < star) pixel = Color.Lerp(gold, white, 1f - r * 2.6f);
+                    break;
+            }
+
+            tex.SetPixel(x, y, pixel);
+        }
+
+        tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, size, size),
+            new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    static bool Capsule(float u, float v, float ax, float ay, float bx, float by, float radius)
+    {
+        Vector2 p = new Vector2(u, v);
+        Vector2 a = new Vector2(ax, ay);
+        Vector2 b = new Vector2(bx, by);
+        Vector2 ab = b - a;
+        float t = Mathf.Clamp01(Vector2.Dot(p - a, ab) / Mathf.Max(0.0001f, ab.sqrMagnitude));
+        return Vector2.Distance(p, a + ab * t) < radius;
+    }
+
+    static bool TriangleRight(float u, float v, float cx, float cy, float width, float height)
+    {
+        float x = (u - cx) / width;
+        float y = Mathf.Abs(v - cy) / height;
+        return x >= -0.5f && x <= 0.5f && y <= x + 0.5f;
+    }
+
+    static bool TriangleUp(float u, float v, float cx, float cy, float width, float height)
+    {
+        float y = (v - cy) / height;
+        float x = Mathf.Abs(u - cx) / width;
+        return y >= -0.5f && y <= 0.5f && x <= y + 0.5f;
+    }
+
+    static bool TriangleDown(float u, float v, float cx, float cy, float width, float height)
+    {
+        float y = (cy - v) / height;
+        float x = Mathf.Abs(u - cx) / width;
+        return y >= -0.5f && y <= 0.5f && x <= y + 0.5f;
+    }
+
     // ───────────────────────── Audio ─────────────────────────
     public static AudioClip Tone(float freq, float duration, float decay = 14f)
     {
