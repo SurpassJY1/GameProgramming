@@ -21,7 +21,9 @@ Key scripts:
 
 ### Project-generated cute pixel sprites
 
-The primary in-game visual set is original pixel art generated for this project:
+The primary in-game visual set is original pixel art generated for this project.
+
+License/status: original project work for this module; no external image license is required.
 
 - `Project2DImproved 2/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/floor_tile.png`
 - `Project2DImproved 2/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/wall_tile.png`
@@ -41,12 +43,16 @@ The project uses free CC0/public-domain style sprites from:
 
 - Asset pack: Kenney - Topdown Shooter
 - Source: https://opengameart.org/content/topdown-shooter
-- License: CC0 / public-domain style reuse as listed on the source page
+- License: Creative Commons Zero (CC0 1.0)
+- Local license copy: `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/License.txt`
 - Local files:
   - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/player.png`
   - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/enemy.png`
+  - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/floor.png`
   - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/floor_tile.png`
+  - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/wall.png`
   - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/wall_tile.png`
+  - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/wall_tile_contrast.png`
 
 Attribution is not required by the license, but the source is recorded here and in `README.md` for academic transparency.
 
@@ -76,7 +82,11 @@ No external audio files, music, or sound libraries are used.
 
 ## Fonts
 
-The UI uses Unity's built-in `LegacyRuntime.ttf`, loaded through `Resources.GetBuiltinResource`.
+The UI uses Unity's built-in `LegacyRuntime.ttf`, loaded through `Resources.GetBuiltinResource`. No external font files are included.
+
+## Unity Packages
+
+Unity `2022.3.62f1` and the packages listed in `Project2DImproved 2/Packages/manifest.json` are used under Unity's package and editor terms. Package cache license files are Unity-managed under `Library/PackageCache` and are not project-authored runtime assets.
 
 ## External Sources
 
