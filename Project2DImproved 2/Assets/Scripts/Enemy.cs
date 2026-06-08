@@ -1,8 +1,24 @@
 using UnityEngine;
 
+public enum EnemyKind
+{
+    SlimeScout,
+    TinyBat,
+    ShieldGuard,
+    SparkSpitter,
+    BombSprite,
+    FrostWisp,
+    DashImp,
+    HealerFairy,
+    SummonerShade,
+    CrystalBrute
+}
+
 /// Dungeon guard that patrols two points and chases the player when nearby.
 public class Enemy : MonoBehaviour
 {
+    public EnemyKind kind = EnemyKind.SlimeScout;
+    public string displayName = "Slime Scout";
     public Transform player;
     public Vector3 pointA;
     public Vector3 pointB;
@@ -29,6 +45,9 @@ public class Enemy : MonoBehaviour
     float slowTimer;
     float slowMultiplier = 1f;
     bool dead;
+
+    public bool IsDead { get { return dead; } }
+    public float HealthFraction { get { return maxHealth <= 0 ? 0f : (float)currentHealth / maxHealth; } }
 
     void Awake()
     {
@@ -121,6 +140,35 @@ public class Enemy : MonoBehaviour
         slowTimer = Mathf.Max(slowTimer, duration);
         alertTimer = Mathf.Max(alertTimer, alertSecondsAfterHit);
         UpdateVisualState();
+    }
+
+    public void Heal(int amount)
+    {
+        if (dead || amount <= 0) return;
+
+        currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
+        hitFlashTimer = 0.08f;
+        UpdateVisualState();
+    }
+
+    public void ForceAlert(float duration)
+    {
+        if (dead) return;
+        alertTimer = Mathf.Max(alertTimer, duration);
+    }
+
+    public bool HasLineOfSightToPlayer(float range)
+    {
+        if (player == null) return false;
+
+        Vector2 toPlayer = player.position - transform.position;
+        if (toPlayer.magnitude > range) return false;
+        return !Physics2D.Raycast(transform.position, toPlayer.normalized, toPlayer.magnitude, wallMask);
+    }
+
+    public void TryMoveAbilityDelta(Vector3 delta)
+    {
+        TryApplyKnockback(delta);
     }
 
     void DealDamage(int amount)
@@ -231,5 +279,299 @@ public class Enemy : MonoBehaviour
         if (Mathf.Abs(yDelta.y) > 0.001f &&
             !Physics2D.CircleCast(transform.position, collisionRadius, yDelta.normalized, Mathf.Abs(yDelta.y), wallMask))
             transform.position += (Vector3)yDelta;
+    }
+}
+
+public class EnemyAbilityController : MonoBehaviour
+{
+    public Enemy owner;
+    public EnemyKind kind;
+    public Transform player;
+    public LayerMask wallMask;
+    public Sprite projectileSprite;
+    public Sprite slimeSprite;
+    public Transform spawnRoot;
+
+    float abilityTimer;
+    float dashWindup;
+    float dashTimer;
+    Vector2 dashDirection;
+    int summonsMade;
+    bool exploded;
+
+    void Start()
+    {
+        owner = owner != null ? owner : GetComponent<Enemy>();
+        abilityTimer = Random.Range(0.25f, 1.2f);
+    }
+
+    void Update()
+    {
+        if (owner == null || owner.IsDead || GameManager.I == null || GameManager.I.phase != GameManager.Phase.Playing) return;
+        if (player == null) return;
+
+        switch (kind)
+        {
+            case EnemyKind.SparkSpitter:
+                UpdateProjectileAttack(1.55f, 5.2f, 5.8f, 1, 0f, 1f, 0f, new Color(1f, 0.82f, 0.25f, 1f));
+                break;
+            case EnemyKind.BombSprite:
+                UpdateBombSprite();
+                break;
+            case EnemyKind.FrostWisp:
+                UpdateProjectileAttack(2.1f, 4.8f, 4.7f, 0, 2.4f, 0.45f, 1.6f, new Color(0.42f, 0.88f, 1f, 1f));
+                break;
+            case EnemyKind.DashImp:
+                UpdateDashImp();
+                break;
+            case EnemyKind.HealerFairy:
+                UpdateHealerFairy();
+                break;
+            case EnemyKind.SummonerShade:
+                UpdateSummonerShade();
+                break;
+            case EnemyKind.CrystalBrute:
+                UpdateCrystalBrute();
+                break;
+        }
+    }
+
+    void UpdateProjectileAttack(float interval, float range, float speed, int damage, float slowDuration, float slowMultiplier, float lifetime, Color color)
+    {
+        abilityTimer -= Time.deltaTime;
+        if (abilityTimer > 0f || !owner.HasLineOfSightToPlayer(range)) return;
+
+        abilityTimer = interval + Random.Range(-0.18f, 0.28f);
+        Vector2 direction = ((Vector2)player.position - (Vector2)transform.position).normalized;
+        SpawnEnemyProjectile(direction, speed, damage, slowDuration, slowMultiplier, lifetime > 0f ? lifetime : 1.4f, color);
+        owner.ForceAlert(2.4f);
+    }
+
+    void SpawnEnemyProjectile(Vector2 direction, float speed, int damage, float slowDuration, float slowMultiplier, float lifetime, Color color)
+    {
+        GameObject projectile = new GameObject(kind + " Projectile");
+        projectile.transform.SetParent(spawnRoot != null ? spawnRoot : transform.parent);
+        projectile.transform.position = transform.position + (Vector3)(direction * 0.35f);
+        projectile.transform.rotation = Quaternion.FromToRotation(Vector3.up, direction);
+        projectile.transform.localScale = new Vector3(0.44f, 0.32f, 1f);
+
+        SpriteRenderer sr = projectile.AddComponent<SpriteRenderer>();
+        sr.sprite = projectileSprite != null ? projectileSprite : Art2D.Projectile(64, 24);
+        sr.color = color;
+        sr.sortingOrder = 4;
+
+        CircleCollider2D col = projectile.AddComponent<CircleCollider2D>();
+        col.isTrigger = true;
+        col.radius = 0.28f;
+
+        Rigidbody2D rb = projectile.AddComponent<Rigidbody2D>();
+        rb.bodyType = RigidbodyType2D.Kinematic;
+        rb.gravityScale = 0f;
+
+        EnemyProjectile enemyProjectile = projectile.AddComponent<EnemyProjectile>();
+        enemyProjectile.speed = speed;
+        enemyProjectile.damage = damage;
+        enemyProjectile.slowDuration = slowDuration;
+        enemyProjectile.slowMultiplier = slowMultiplier;
+        enemyProjectile.lifetime = lifetime;
+        enemyProjectile.wallMask = wallMask;
+    }
+
+    void UpdateBombSprite()
+    {
+        if (exploded) return;
+
+        float distance = Vector2.Distance(transform.position, player.position);
+        if (distance > 0.8f) return;
+
+        exploded = true;
+        Player target = player.GetComponent<Player>();
+        if (target != null && distance <= 1.25f) target.TakeHit(transform.position);
+        SpawnPulse(new Color(1f, 0.55f, 0.15f, 0.55f), 2.3f, 0.32f);
+        owner.Die();
+    }
+
+    void UpdateDashImp()
+    {
+        if (dashTimer > 0f)
+        {
+            dashTimer -= Time.deltaTime;
+            owner.TryMoveAbilityDelta((Vector3)(dashDirection * (7.4f * Time.deltaTime)));
+            return;
+        }
+
+        if (dashWindup > 0f)
+        {
+            dashWindup -= Time.deltaTime;
+            if (dashWindup <= 0f)
+            {
+                dashTimer = 0.28f;
+                dashDirection = ((Vector2)player.position - (Vector2)transform.position).normalized;
+            }
+            return;
+        }
+
+        abilityTimer -= Time.deltaTime;
+        if (abilityTimer > 0f || !owner.HasLineOfSightToPlayer(4.6f)) return;
+
+        abilityTimer = 2.4f;
+        dashWindup = 0.42f;
+        SpawnPulse(new Color(1f, 0.92f, 0.25f, 0.26f), 1.4f, 0.22f);
+        owner.ForceAlert(2.2f);
+    }
+
+    void UpdateHealerFairy()
+    {
+        abilityTimer -= Time.deltaTime;
+        if (abilityTimer > 0f) return;
+
+        abilityTimer = 3.4f;
+        Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, 2.35f);
+        bool healed = false;
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Enemy ally = hits[i].GetComponent<Enemy>();
+            if (ally == null || ally == owner || ally.IsDead || ally.HealthFraction >= 0.98f) continue;
+
+            ally.Heal(1);
+            healed = true;
+        }
+
+        if (healed) SpawnPulse(new Color(0.5f, 1f, 0.68f, 0.3f), 2.6f, 0.35f);
+    }
+
+    void UpdateSummonerShade()
+    {
+        if (summonsMade >= 3) return;
+
+        abilityTimer -= Time.deltaTime;
+        if (abilityTimer > 0f || !owner.HasLineOfSightToPlayer(5.0f)) return;
+
+        abilityTimer = 4.8f;
+        if (TrySummonSlime()) summonsMade++;
+    }
+
+    bool TrySummonSlime()
+    {
+        for (int i = 0; i < 10; i++)
+        {
+            Vector2 offset = Random.insideUnitCircle.normalized * Random.Range(0.7f, 1.25f);
+            Vector2 candidate = (Vector2)transform.position + offset;
+            if (Physics2D.OverlapCircle(candidate, 0.34f, wallMask) != null) continue;
+
+            GameObject slime = new GameObject("Summoned Slime Scout");
+            slime.transform.SetParent(spawnRoot != null ? spawnRoot : transform.parent);
+            slime.transform.position = candidate;
+            slime.transform.localScale = Vector3.one * 0.78f;
+
+            SpriteRenderer sr = slime.AddComponent<SpriteRenderer>();
+            sr.sprite = slimeSprite != null ? slimeSprite : Art2D.EnemySprite(EnemyKind.SlimeScout);
+            sr.color = new Color(0.72f, 1f, 0.62f, 1f);
+            sr.sortingOrder = 2;
+
+            CircleCollider2D col = slime.AddComponent<CircleCollider2D>();
+            col.isTrigger = true;
+            col.radius = 0.44f;
+
+            Rigidbody2D rb = slime.AddComponent<Rigidbody2D>();
+            rb.bodyType = RigidbodyType2D.Kinematic;
+            rb.gravityScale = 0f;
+
+            Enemy enemy = slime.AddComponent<Enemy>();
+            enemy.kind = EnemyKind.SlimeScout;
+            enemy.displayName = "Summoned Slime Scout";
+            enemy.player = player;
+            enemy.pointA = candidate;
+            enemy.pointB = candidate + Random.insideUnitCircle.normalized * 0.9f;
+            enemy.wallMask = wallMask;
+            enemy.maxHealth = 1;
+            enemy.currentHealth = 1;
+            enemy.patrolSpeed = 1.7f;
+            enemy.chaseSpeed = 2.45f;
+            enemy.chaseRange = 2.8f;
+            enemy.xpReward = 2;
+            enemy.collisionRadius = 0.3f;
+
+            SpawnPulse(new Color(0.55f, 0.45f, 0.95f, 0.32f), 1.7f, 0.28f);
+            return true;
+        }
+
+        return false;
+    }
+
+    void UpdateCrystalBrute()
+    {
+        abilityTimer -= Time.deltaTime;
+        if (abilityTimer > 0f || !owner.HasLineOfSightToPlayer(4.2f)) return;
+
+        abilityTimer = 3.2f;
+        Vector2 direction = ((Vector2)player.position - (Vector2)transform.position).normalized;
+        owner.TryMoveAbilityDelta((Vector3)(direction * 0.75f));
+        SpawnPulse(new Color(0.7f, 0.92f, 1f, 0.26f), 2.0f, 0.24f);
+        owner.ForceAlert(2.5f);
+    }
+
+    void SpawnPulse(Color color, float scale, float life)
+    {
+        GameObject pulse = new GameObject(kind + " Pulse");
+        pulse.transform.SetParent(spawnRoot != null ? spawnRoot : transform.parent);
+        pulse.transform.position = transform.position;
+        pulse.transform.localScale = Vector3.one * scale;
+
+        SpriteRenderer sr = pulse.AddComponent<SpriteRenderer>();
+        sr.sprite = Art2D.SolidCircle(color, 64);
+        sr.sortingOrder = 3;
+
+        BulletImpact effect = pulse.AddComponent<BulletImpact>();
+        effect.life = life;
+        effect.drift = Vector2.zero;
+    }
+}
+
+public class EnemyProjectile : MonoBehaviour
+{
+    public float speed = 5f;
+    public int damage = 1;
+    public float lifetime = 1.4f;
+    public float radius = 0.14f;
+    public float slowDuration;
+    public float slowMultiplier = 0.5f;
+    public LayerMask wallMask;
+
+    float born;
+
+    void Start()
+    {
+        born = Time.time;
+    }
+
+    void Update()
+    {
+        if (Time.time - born >= lifetime)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Vector2 current = transform.position;
+        Vector2 direction = transform.up;
+        float distance = speed * Time.deltaTime;
+        if (wallMask.value != 0 && Physics2D.CircleCast(current, radius, direction, distance, wallMask).collider != null)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        transform.position = current + direction * distance;
+    }
+
+    void OnTriggerEnter2D(Collider2D other)
+    {
+        Player player = other.GetComponent<Player>();
+        if (player == null) return;
+
+        if (damage > 0) player.TakeHit(transform.position);
+        if (slowDuration > 0f) player.ApplyTemporarySlow(slowMultiplier, slowDuration);
+        Destroy(gameObject);
     }
 }

@@ -17,6 +17,8 @@ public class Player : MonoBehaviour
     float invulnerabilityTimer;
     float footstepTimer;
     float baseMoveSpeed;
+    float moveSlowTimer;
+    float moveSlowMultiplier = 1f;
     AudioSource audioSrc;
     SpriteRenderer sr;
     Color baseColor;
@@ -49,6 +51,7 @@ public class Player : MonoBehaviour
         EmitFootsteps(movedDistance);
 
         if (invulnerabilityTimer > 0f) invulnerabilityTimer -= Time.deltaTime;
+        UpdateMoveSlow();
         UpdateTint();
     }
 
@@ -59,7 +62,7 @@ public class Player : MonoBehaviour
         Vector3 before = transform.position;
 
         Vector2 current = transform.position;
-        Vector2 delta = input * (moveSpeed * Time.deltaTime);
+        Vector2 delta = input * (moveSpeed * moveSlowMultiplier * Time.deltaTime);
         if (!Physics2D.CircleCast(current, radius, delta.normalized, delta.magnitude, wallMask))
         {
             transform.position = current + delta;
@@ -101,6 +104,8 @@ public class Player : MonoBehaviour
         moveSpeed = baseMoveSpeed;
         invulnerabilityTimer = 0f;
         footstepTimer = 0f;
+        moveSlowTimer = 0f;
+        moveSlowMultiplier = 1f;
         if (sr != null) sr.color = baseColor;
     }
 
@@ -114,7 +119,17 @@ public class Player : MonoBehaviour
         transform.position = position;
         invulnerabilityTimer = 0f;
         footstepTimer = 0f;
+        moveSlowTimer = 0f;
+        moveSlowMultiplier = 1f;
         if (sr != null) sr.color = baseColor;
+    }
+
+    public void ApplyTemporarySlow(float multiplier, float duration)
+    {
+        if (duration <= 0f) return;
+
+        moveSlowMultiplier = Mathf.Clamp(multiplier, 0.35f, 1f);
+        moveSlowTimer = Mathf.Max(moveSlowTimer, duration);
     }
 
     void OnTriggerEnter2D(Collider2D other)
@@ -155,6 +170,18 @@ public class Player : MonoBehaviour
     void Play(AudioClip clip, float volume)
     {
         if (clip != null) audioSrc.PlayOneShot(clip, volume);
+    }
+
+    void UpdateMoveSlow()
+    {
+        if (moveSlowTimer <= 0f) return;
+
+        moveSlowTimer -= Time.deltaTime;
+        if (moveSlowTimer <= 0f)
+        {
+            moveSlowTimer = 0f;
+            moveSlowMultiplier = 1f;
+        }
     }
 
     void EmitFootsteps(float movedDistance)
