@@ -50,10 +50,13 @@ GameProgramming/
 ## Credits and Licensing
 
 - **Project code and gameplay logic**: original work for this project.
-- **Sound effects**: generated procedurally in `Project2DImproved 2/Assets/Scripts/Art2D.cs`.
+- **Unity engine and packages**: Unity `2022.3.62f1` and packages in `Project2DImproved 2/Packages/manifest.json`; used under Unity's package and editor terms.
+- **Fonts**: Unity built-in `LegacyRuntime.ttf`, loaded through `Resources.GetBuiltinResource`; no external font files are included.
+- **Sound effects**: generated procedurally in `Project2DImproved 2/Assets/Scripts/Art2D.cs`; no external audio files are included.
 - **Project-generated cute pixel visual assets**:
   - The current primary visual set is original project-generated pixel art created for this project.
-  - Local files used:
+  - License/status: original project work for this module; no external image license is required.
+  - Local files:
     - `Project2DImproved 2/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/floor_tile.png`
     - `Project2DImproved 2/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/wall_tile.png`
     - `Project2DImproved 2/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/player.png`
@@ -64,21 +67,25 @@ GameProgramming/
     - `Project2DImproved 2/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/ui_panel.png`
     - `Project2DImproved 2/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/ui_button.png`
   - Additional fallback sprites, lighting glows, shadows, upgrade icons, and the 10 procedural enemy type sprites are generated in `Project2DImproved 2/Assets/Scripts/Art2D.cs` and `Project2DImproved 2/Assets/Scripts/GameBootstrap.cs`.
-- **Third-party fallback sprite assets (player/enemy/floor/wall)**:
+- **Third-party fallback sprite assets (Kenney Topdown Shooter)**:
   - Source: [Kenney - Topdown Shooter (OpenGameArt mirror)](https://opengameart.org/content/topdown-shooter)
+  - License: **Creative Commons Zero (CC0 1.0)**.
+  - Local license copy: `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/License.txt`
   - Tile texture provenance (academic integrity):
     - In-use wall texture: `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/wall_tile.png`
     - In-use floor texture: `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/floor_tile.png`
     - Both are retained under `Assets/StreamingAssets/thirdparty/topdown-shooter/` from the credited Kenney pack.
-  - Local files used:
+  - Local files:
     - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/player.png`
     - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/enemy.png`
+    - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/floor.png`
     - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/floor_tile.png`
+    - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/wall.png`
     - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/wall_tile.png`
-  - License: **CC0 / public domain style reuse** as listed on the source page.
+    - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/wall_tile_contrast.png`
   - Attribution note: the source indicates credit is optional, but this README includes explicit credit for academic transparency and to avoid misconduct concerns.
 
-All reused assets are documented above with source and license. No paid or restricted-license assets are included. A network attempt was made to reach the planned itch.io resource, but the environment could not connect, so no Ninja Adventure or Adventure UI files are included or claimed as used.
+All local runtime assets are documented above with source and license/status. No paid or restricted-license assets are included. A network attempt was made to reach the planned itch.io resource, but the environment could not connect, so no Ninja Adventure or Adventure UI files are included or claimed as used.
 
 ## Known Limitations
 
