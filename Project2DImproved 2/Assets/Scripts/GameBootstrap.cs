@@ -62,6 +62,76 @@ public class GameBootstrap : MonoBehaviour
         }
     }
 
+    struct EnemyConfig
+    {
+        public EnemyKind kind;
+        public string displayName;
+        public int unlockFloor;
+        public float healthMultiplier;
+        public float patrolSpeedMultiplier;
+        public float chaseSpeedMultiplier;
+        public float chaseRange;
+        public float xpMultiplier;
+        public string spritePath;
+        public float scale;
+        public bool hasRangedAttack;
+        public bool hasDashAttack;
+        public bool explodesOnProximity;
+        public bool healsAllies;
+        public bool summonsAllies;
+        public bool elite;
+
+        public EnemyConfig(
+            EnemyKind kind,
+            string displayName,
+            int unlockFloor,
+            float healthMultiplier,
+            float patrolSpeedMultiplier,
+            float chaseSpeedMultiplier,
+            float chaseRange,
+            float xpMultiplier,
+            string spritePath,
+            float scale,
+            bool hasRangedAttack = false,
+            bool hasDashAttack = false,
+            bool explodesOnProximity = false,
+            bool healsAllies = false,
+            bool summonsAllies = false,
+            bool elite = false)
+        {
+            this.kind = kind;
+            this.displayName = displayName;
+            this.unlockFloor = unlockFloor;
+            this.healthMultiplier = healthMultiplier;
+            this.patrolSpeedMultiplier = patrolSpeedMultiplier;
+            this.chaseSpeedMultiplier = chaseSpeedMultiplier;
+            this.chaseRange = chaseRange;
+            this.xpMultiplier = xpMultiplier;
+            this.spritePath = spritePath;
+            this.scale = scale;
+            this.hasRangedAttack = hasRangedAttack;
+            this.hasDashAttack = hasDashAttack;
+            this.explodesOnProximity = explodesOnProximity;
+            this.healsAllies = healsAllies;
+            this.summonsAllies = summonsAllies;
+            this.elite = elite;
+        }
+    }
+
+    static readonly EnemyConfig[] EnemyConfigs =
+    {
+        new EnemyConfig(EnemyKind.SlimeScout, "Slime Scout", 1, 0.85f, 0.85f, 0.86f, 2.8f, 0.85f, null, 0.82f),
+        new EnemyConfig(EnemyKind.TinyBat, "Tiny Bat", 2, 0.65f, 1.35f, 1.42f, 4.0f, 0.95f, null, 0.72f),
+        new EnemyConfig(EnemyKind.ShieldGuard, "Shield Guard", 3, 1.75f, 0.7f, 0.76f, 3.0f, 1.35f, null, 0.95f),
+        new EnemyConfig(EnemyKind.SparkSpitter, "Spark Spitter", 4, 1.05f, 0.78f, 0.72f, 4.7f, 1.35f, null, 0.84f, hasRangedAttack: true),
+        new EnemyConfig(EnemyKind.BombSprite, "Bomb Sprite", 5, 1.0f, 0.74f, 0.95f, 3.7f, 1.25f, null, 0.88f, explodesOnProximity: true),
+        new EnemyConfig(EnemyKind.FrostWisp, "Frost Wisp", 6, 1.1f, 0.95f, 0.94f, 4.4f, 1.45f, null, 0.82f, hasRangedAttack: true),
+        new EnemyConfig(EnemyKind.DashImp, "Dash Imp", 7, 1.2f, 1.02f, 1.12f, 4.2f, 1.55f, null, 0.86f, hasDashAttack: true),
+        new EnemyConfig(EnemyKind.HealerFairy, "Healer Fairy", 8, 0.9f, 0.92f, 0.88f, 3.5f, 1.65f, null, 0.78f, healsAllies: true),
+        new EnemyConfig(EnemyKind.SummonerShade, "Summoner Shade", 9, 1.35f, 0.72f, 0.8f, 4.4f, 1.9f, null, 0.92f, summonsAllies: true),
+        new EnemyConfig(EnemyKind.CrystalBrute, "Crystal Brute", 10, 2.8f, 0.72f, 1.08f, 4.0f, 2.6f, null, 1.12f, elite: true)
+    };
+
     struct RoomVariant
     {
         public Vector3 playerStart;
@@ -134,6 +204,7 @@ public class GameBootstrap : MonoBehaviour
 
     Sprite LoadPixelSprite(string path, float pixelsPerUnit = PixelActorPixelsPerUnit)
     {
+        if (string.IsNullOrEmpty(path)) return null;
         return Art2D.FromPngFile(path, pixelsPerUnit);
     }
 
@@ -185,7 +256,8 @@ public class GameBootstrap : MonoBehaviour
         for (int i = 0; i < enemyCount; i++)
         {
             EnemyPatrolSpec patrol = PatrolForEnemy(room, i);
-            BuildEnemy("Guard_" + floor + "_" + i, playerTransform, patrol.pointA, patrol.pointB, floor);
+            EnemyKind kind = ChooseEnemyKindForFloor(floor, i);
+            BuildEnemy(kind + "_" + floor + "_" + i, kind, playerTransform, patrol.pointA, patrol.pointB, floor);
         }
     }
 
@@ -467,8 +539,84 @@ public class GameBootstrap : MonoBehaviour
         return new EnemyPatrolSpec(basePatrol.pointA + offset, basePatrol.pointB - offset);
     }
 
-    void BuildEnemy(string name, Transform player, Vector3 a, Vector3 b, int floor)
+    EnemyKind ChooseEnemyKindForFloor(int floor, int enemyIndex)
     {
+        if (floor <= 1) return EnemyKind.SlimeScout;
+
+        if (enemyIndex == 0)
+        {
+            for (int i = 0; i < EnemyConfigs.Length; i++)
+                if (EnemyConfigs[i].unlockFloor == floor) return EnemyConfigs[i].kind;
+        }
+
+        int totalWeight = 0;
+        for (int i = 0; i < EnemyConfigs.Length; i++)
+        {
+            if (EnemyConfigs[i].unlockFloor > floor) continue;
+            totalWeight += EnemySpawnWeight(EnemyConfigs[i], floor);
+        }
+
+        if (totalWeight <= 0) return EnemyKind.SlimeScout;
+
+        int seed = floor * 73856093 ^ enemyIndex * 19349663;
+        int roll = Mathf.Abs(seed) % totalWeight;
+        for (int i = 0; i < EnemyConfigs.Length; i++)
+        {
+            EnemyConfig config = EnemyConfigs[i];
+            if (config.unlockFloor > floor) continue;
+
+            int weight = EnemySpawnWeight(config, floor);
+            if (roll < weight) return config.kind;
+            roll -= weight;
+        }
+
+        return EnemyKind.SlimeScout;
+    }
+
+    int EnemySpawnWeight(EnemyConfig config, int floor)
+    {
+        int floorsUnlocked = Mathf.Max(0, floor - config.unlockFloor);
+        int weight = config.elite ? 1 : Mathf.Max(2, 9 - floorsUnlocked);
+
+        switch (config.kind)
+        {
+            case EnemyKind.SlimeScout:
+                weight = floor <= 3 ? 10 : Mathf.Max(3, 8 - floor / 2);
+                break;
+            case EnemyKind.TinyBat:
+                weight = floor <= 5 ? 7 : 5;
+                break;
+            case EnemyKind.ShieldGuard:
+                weight = 5;
+                break;
+            case EnemyKind.SparkSpitter:
+            case EnemyKind.FrostWisp:
+            case EnemyKind.DashImp:
+                weight = 4;
+                break;
+            case EnemyKind.HealerFairy:
+            case EnemyKind.SummonerShade:
+                weight = 2;
+                break;
+            case EnemyKind.CrystalBrute:
+                weight = floor >= 10 ? 1 + Mathf.Min(2, (floor - 10) / 3) : 0;
+                break;
+        }
+
+        return Mathf.Max(0, weight);
+    }
+
+    EnemyConfig GetEnemyConfig(EnemyKind kind)
+    {
+        for (int i = 0; i < EnemyConfigs.Length; i++)
+            if (EnemyConfigs[i].kind == kind) return EnemyConfigs[i];
+
+        return EnemyConfigs[0];
+    }
+
+    void BuildEnemy(string name, EnemyKind kind, Transform player, Vector3 a, Vector3 b, int floor)
+    {
+        EnemyConfig config = GetEnemyConfig(kind);
         Vector2 safeA = ResolveFreeCirclePosition(new Vector2(a.x, a.y), 0.38f);
         Vector2 safeB = ResolveFreeCirclePosition(new Vector2(b.x, b.y), 0.38f);
         safeA = ResolveAwayFromPlayer(safeA, 1.35f);
@@ -479,10 +627,12 @@ public class GameBootstrap : MonoBehaviour
         GameObject enemy = new GameObject(name);
         enemy.transform.SetParent(currentFloorRoot.transform);
         enemy.transform.position = a;
-        enemy.transform.localScale = Vector3.one * 0.9f;
+        enemy.transform.localScale = Vector3.one * config.scale;
         AddShadow(enemy.transform, new Vector2(0f, -0.34f), new Vector3(0.95f, 0.34f, 1f), -0.02f);
         SpriteRenderer sr = enemy.AddComponent<SpriteRenderer>();
-        sr.sprite = LoadWorldSprite(EnemySpritePath, PixelActorPixelsPerUnit, KenneyEnemySpritePath, 100f)
+        sr.sprite = LoadPixelSprite(config.spritePath, PixelActorPixelsPerUnit)
+            ?? Art2D.EnemySprite(kind)
+            ?? LoadWorldSprite(EnemySpritePath, PixelActorPixelsPerUnit, KenneyEnemySpritePath, 100f)
             ?? Art2D.Diamond(new Color(0.92f, 0.25f, 0.25f));
         sr.sortingOrder = 2;
         CircleCollider2D col = enemy.AddComponent<CircleCollider2D>();
@@ -492,11 +642,30 @@ public class GameBootstrap : MonoBehaviour
         rb.bodyType = RigidbodyType2D.Kinematic;
         rb.gravityScale = 0f;
         Enemy guard = enemy.AddComponent<Enemy>();
+        guard.kind = kind;
+        guard.displayName = config.displayName;
         guard.player = player;
         guard.pointA = a;
         guard.pointB = b;
         guard.wallMask = 1 << WallLayer;
-        ApplyEnemyScaling(guard, floor);
+        ApplyEnemyScaling(guard, floor, config);
+        AddEnemyAbilityIfNeeded(enemy, guard, config);
+    }
+
+    void AddEnemyAbilityIfNeeded(GameObject enemy, Enemy guard, EnemyConfig config)
+    {
+        bool hasAbility = config.hasRangedAttack || config.hasDashAttack || config.explodesOnProximity ||
+            config.healsAllies || config.summonsAllies || config.elite;
+        if (!hasAbility) return;
+
+        EnemyAbilityController ability = enemy.AddComponent<EnemyAbilityController>();
+        ability.owner = guard;
+        ability.kind = config.kind;
+        ability.player = playerTransform;
+        ability.wallMask = 1 << WallLayer;
+        ability.projectileSprite = LoadPixelSprite(ProjectileSpritePath, 64f) ?? Art2D.Projectile(64, 24);
+        ability.slimeSprite = Art2D.EnemySprite(EnemyKind.SlimeScout);
+        ability.spawnRoot = currentFloorRoot != null ? currentFloorRoot.transform : null;
     }
 
     void AddShadow(Transform parent, Vector2 offset, Vector3 scale, float zOffset)
@@ -521,15 +690,16 @@ public class GameBootstrap : MonoBehaviour
         sr.sortingOrder = sortingOrder;
     }
 
-    void ApplyEnemyScaling(Enemy enemy, int floor)
+    void ApplyEnemyScaling(Enemy enemy, int floor, EnemyConfig config)
     {
         int floorIndex = Mathf.Max(0, floor - 1);
         int healthGrowth = Mathf.FloorToInt(floorIndex * 1.15f) + Mathf.FloorToInt(floorIndex / 3f);
-        enemy.maxHealth = Mathf.Min(MaxEnemyHealth, BaseEnemyHealth + healthGrowth);
+        enemy.maxHealth = Mathf.Min(MaxEnemyHealth, Mathf.Max(1, Mathf.RoundToInt((BaseEnemyHealth + healthGrowth) * config.healthMultiplier)));
         enemy.currentHealth = enemy.maxHealth;
-        enemy.patrolSpeed = Mathf.Min(MaxPatrolSpeed, BasePatrolSpeed + floorIndex * 0.12f);
-        enemy.chaseSpeed = Mathf.Min(MaxChaseSpeed, BaseChaseSpeed + floorIndex * 0.2f);
-        enemy.xpReward = Mathf.Min(MaxEnemyXP, BaseEnemyXP + floorIndex * 4);
+        enemy.patrolSpeed = Mathf.Min(MaxPatrolSpeed, (BasePatrolSpeed + floorIndex * 0.12f) * config.patrolSpeedMultiplier);
+        enemy.chaseSpeed = Mathf.Min(MaxChaseSpeed, (BaseChaseSpeed + floorIndex * 0.2f) * config.chaseSpeedMultiplier);
+        enemy.chaseRange = config.chaseRange;
+        enemy.xpReward = Mathf.Min(MaxEnemyXP, Mathf.Max(1, Mathf.RoundToInt((BaseEnemyXP + floorIndex * 4) * config.xpMultiplier)));
     }
 
     Vector2 ResolveAwayFromPlayer(Vector2 desired, float minDistance)

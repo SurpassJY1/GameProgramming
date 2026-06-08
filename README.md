@@ -23,7 +23,7 @@ The scene uses `GameBootstrap.cs` to build the full level at runtime and load se
 
 - 2D top-down player movement with wall collision
 - Compact dungeon layout with walls, key, exit, and guards
-- Patrol and chase-style enemy behaviour
+- 10 cute pixel enemy types that unlock progressively from floor 1 through floor 10+
 - Lives, key state, timer, objective text, pause menu, victory, and game over
 - Runtime-loaded cute pixel sprites for player/enemy/floor/wall/items/UI plus documented CC0 fallback sprites
 - Runtime-generated sound effects
@@ -63,7 +63,7 @@ GameProgramming/
     - `Project2DImproved 2/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/projectile.png`
     - `Project2DImproved 2/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/ui_panel.png`
     - `Project2DImproved 2/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/ui_button.png`
-  - Additional fallback sprites, lighting glows, shadows, and upgrade icons are generated in `Project2DImproved 2/Assets/Scripts/Art2D.cs` and `Project2DImproved 2/Assets/Scripts/GameBootstrap.cs`.
+  - Additional fallback sprites, lighting glows, shadows, upgrade icons, and the 10 procedural enemy type sprites are generated in `Project2DImproved 2/Assets/Scripts/Art2D.cs` and `Project2DImproved 2/Assets/Scripts/GameBootstrap.cs`.
 - **Third-party fallback sprite assets (player/enemy/floor/wall)**:
   - Source: [Kenney - Topdown Shooter (OpenGameArt mirror)](https://opengameart.org/content/topdown-shooter)
   - Tile texture provenance (academic integrity):
