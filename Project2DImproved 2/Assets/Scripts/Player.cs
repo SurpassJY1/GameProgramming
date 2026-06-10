@@ -1,6 +1,12 @@
 using UnityEngine;
 
-/// Top-down player movement with manual wall blocking and short hit immunity.
+/// Top-down player controller for movement, pickups, exit interaction, and hit feedback.
+/// Combat lives in PlayerCombat so movement and shooting can be explained separately.
+///
+/// Authorship note:
+/// - Student-owned implementation: player movement, collision feel, pickup/exit interaction,
+///   lives feedback, knockback, and final tuning.
+/// - AI-assisted support: review suggestions and explanatory comments for readability.
 public class Player : MonoBehaviour
 {
     public float moveSpeed = 4.8f;
@@ -63,12 +69,14 @@ public class Player : MonoBehaviour
 
         Vector2 current = transform.position;
         Vector2 delta = input * (moveSpeed * moveSlowMultiplier * Time.deltaTime);
+        // Circle casts keep the player from clipping through thin runtime-built wall colliders.
         if (!Physics2D.CircleCast(current, radius, delta.normalized, delta.magnitude, wallMask))
         {
             transform.position = current + delta;
             return Vector3.Distance(before, transform.position);
         }
 
+        // If diagonal movement hits a corner, try each axis separately so wall sliding feels smooth.
         Vector2 xDelta = new Vector2(delta.x, 0f);
         if (Mathf.Abs(xDelta.x) > 0.001f &&
             !Physics2D.CircleCast(current, radius, xDelta.normalized, Mathf.Abs(xDelta.x), wallMask))
@@ -134,6 +142,8 @@ public class Player : MonoBehaviour
 
     void OnTriggerEnter2D(Collider2D other)
     {
+        // Trigger handling is component-based instead of tag-based. That keeps setup simpler because
+        // GameBootstrap creates the objects at runtime and adds the correct components directly.
         KeyPickup key = other.GetComponent<KeyPickup>();
         if (key != null)
         {
@@ -158,6 +168,7 @@ public class Player : MonoBehaviour
     {
         if (invulnerabilityTimer > 0f || GameManager.I.phase != GameManager.Phase.Playing) return;
 
+        // Short immunity prevents one enemy overlap from removing all lives at once.
         invulnerabilityTimer = invulnerabilitySeconds;
         Play(hitClip, 0.7f);
         CameraShake.Pulse(0.25f, 0.2f);
@@ -186,6 +197,8 @@ public class Player : MonoBehaviour
 
     void EmitFootsteps(float movedDistance)
     {
+        // Footstep puffs are lightweight visual feedback only. They do not affect collision or
+        // gameplay, but they make movement easier to see during the presentation.
         if (movedDistance <= footstepSpeedThreshold * Time.deltaTime) return;
 
         footstepTimer -= Time.deltaTime;
@@ -231,6 +244,8 @@ public class Player : MonoBehaviour
     {
         if (!IsBlocked(transform.position)) return;
 
+        // Runtime room variants can move the player between floors; this fallback nudges the player
+        // to the nearest free spot if a layout change ever places them inside a wall.
         Vector3 origin = transform.position;
         for (int ring = 1; ring <= 6; ring++)
         {

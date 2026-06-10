@@ -14,7 +14,13 @@ public enum EnemyKind
     CrystalBrute
 }
 
-/// Dungeon guard that patrols two points and chases the player when nearby.
+/// Base enemy behaviour: patrol between two points, chase with line of sight, take damage,
+/// and apply shared status effects. EnemyAbilityController adds type-specific attacks.
+///
+/// Authorship note:
+/// - Student-owned implementation: enemy movement, chase rules, health/XP behaviour, and final
+///   balance in the playable run.
+/// - AI-assisted support: review suggestions and explanatory comments for ability organization.
 public class Enemy : MonoBehaviour
 {
     public EnemyKind kind = EnemyKind.SlimeScout;
@@ -80,6 +86,9 @@ public class Enemy : MonoBehaviour
 
     void Update()
     {
+        // The base enemy loop is deliberately small: update status effects, decide whether to chase,
+        // move toward the chosen destination, then update visuals. Special attacks are handled below
+        // in EnemyAbilityController so the patrol/chase logic stays readable.
         if (dead || GameManager.I == null || GameManager.I.phase != GameManager.Phase.Playing) return;
 
         if (alertTimer > 0f) alertTimer -= Time.deltaTime;
@@ -100,6 +109,7 @@ public class Enemy : MonoBehaviour
         if (player == null) return false;
         if (alertTimer > 0f) return true;
 
+        // Walls block sight, so enemies can be avoided through route planning instead of only speed.
         Vector2 toPlayer = player.position - transform.position;
         if (toPlayer.magnitude > chaseRange) return false;
         return !Physics2D.Raycast(transform.position, toPlayer.normalized, toPlayer.magnitude, wallMask);
@@ -184,6 +194,8 @@ public class Enemy : MonoBehaviour
     {
         if (dead) return;
 
+        // Defeated enemies are deactivated rather than destroyed immediately. That avoids accidental
+        // duplicate XP events and keeps the death path simple for this vertical slice.
         dead = true;
         if (GameManager.I != null) GameManager.I.RegisterEnemyDefeated(xpReward);
         gameObject.SetActive(false);
@@ -191,6 +203,7 @@ public class Enemy : MonoBehaviour
 
     void UpdateStatusEffects()
     {
+        // Burn and slow are owned by the target so multiple bullet types can apply them consistently.
         if (burnTimer > 0f)
         {
             burnTimer -= Time.deltaTime;
@@ -282,6 +295,12 @@ public class Enemy : MonoBehaviour
     }
 }
 
+/// Optional enemy ability layer used by later-floor enemy types.
+/// Keeping this separate from Enemy makes the simple patrol/chase behaviour easier to read.
+///
+/// Authorship note:
+/// - Student-owned implementation: enemy type selection, ability goals, and final gameplay tuning.
+/// - AI-assisted support: organization review and comments that describe each behaviour pattern.
 public class EnemyAbilityController : MonoBehaviour
 {
     public Enemy owner;
@@ -310,6 +329,7 @@ public class EnemyAbilityController : MonoBehaviour
         if (owner == null || owner.IsDead || GameManager.I == null || GameManager.I.phase != GameManager.Phase.Playing) return;
         if (player == null) return;
 
+        // Each kind has one small ability pattern so enemies feel different without a full AI system.
         switch (kind)
         {
             case EnemyKind.SparkSpitter:
@@ -338,6 +358,8 @@ public class EnemyAbilityController : MonoBehaviour
 
     void UpdateProjectileAttack(float interval, float range, float speed, int damage, float slowDuration, float slowMultiplier, float lifetime, Color color)
     {
+        // Spark Spitter and Frost Wisp share the same ranged attack path. The passed-in parameters
+        // decide whether the projectile deals damage, applies slow, or only creates pressure.
         abilityTimer -= Time.deltaTime;
         if (abilityTimer > 0f || !owner.HasLineOfSightToPlayer(range)) return;
 
@@ -393,6 +415,7 @@ public class EnemyAbilityController : MonoBehaviour
 
     void UpdateDashImp()
     {
+        // Dash has a short windup pulse first, giving the player a readable warning.
         if (dashTimer > 0f)
         {
             dashTimer -= Time.deltaTime;
@@ -422,6 +445,8 @@ public class EnemyAbilityController : MonoBehaviour
 
     void UpdateHealerFairy()
     {
+        // The healer supports nearby enemies but does not heal itself. This keeps the support role
+        // visible without making one enemy stall the run forever.
         abilityTimer -= Time.deltaTime;
         if (abilityTimer > 0f) return;
 
@@ -442,6 +467,8 @@ public class EnemyAbilityController : MonoBehaviour
 
     void UpdateSummonerShade()
     {
+        // Summoning is capped per enemy so late floors add pressure without creating unlimited
+        // enemy growth or performance problems.
         if (summonsMade >= 3) return;
 
         abilityTimer -= Time.deltaTime;
@@ -453,6 +480,7 @@ public class EnemyAbilityController : MonoBehaviour
 
     bool TrySummonSlime()
     {
+        // Try several nearby positions so summoned enemies do not appear inside walls.
         for (int i = 0; i < 10; i++)
         {
             Vector2 offset = Random.insideUnitCircle.normalized * Random.Range(0.7f, 1.25f);
@@ -528,6 +556,12 @@ public class EnemyAbilityController : MonoBehaviour
     }
 }
 
+/// Simple projectile used by ranged enemies. Damage and slow are optional so the same class can
+/// support Spark Spitter and Frost Wisp behaviour.
+///
+/// Authorship note:
+/// - Student-owned implementation: final projectile behaviour and interaction with Player.
+/// - AI-assisted support: comment wording and readability review.
 public class EnemyProjectile : MonoBehaviour
 {
     public float speed = 5f;

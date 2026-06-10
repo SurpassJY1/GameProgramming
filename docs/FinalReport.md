@@ -22,6 +22,10 @@ The player uses circle casts against a wall layer for movement blocking. This gi
 
 The guard AI combines patrol and chase behaviour. Guards move between two patrol points, then chase the player if the player is close and visible. This is enough to create pressure while staying realistic for the project scope.
 
+## Authorship and AI Assistance
+
+The final game direction, Unity integration, gameplay decisions, manual testing, and submitted build are student-completed work. AI assistance was used for brainstorming, issue drafting, code review suggestions, comment wording, and documentation refinement. AI-assisted material was reviewed and adapted before inclusion, and no third-party gameplay starter kit or copied tutorial project is included.
+
 ## Testing and Improvement
 
 Testing focused on the main player flow: menu, movement, wall collision, key pickup, locked exit, unlocked exit, enemy damage, fail state, pause, restart, and victory. The tests are recorded in `TestLog.md`.

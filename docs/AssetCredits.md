@@ -7,7 +7,10 @@
 
 ## Code
 
-All gameplay scripts were written for this module project.
+All gameplay scripts were written for this module project. The final implementation is owned,
+integrated, tested, and presented by the student. AI assistance was used as a development aid for
+planning, code review suggestions, comment drafting, documentation wording, and iteration support;
+AI-assisted text or code was reviewed and adapted before inclusion.
 
 Key scripts:
 
@@ -16,6 +19,22 @@ Key scripts:
 - `Player.cs`: movement, wall blocking, pickups, exit use, and damage
 - `Enemy.cs`: base patrol/chase behaviour plus enemy type abilities for ranged, dash, burst, support, and summoning roles
 - `HUD.cs` and `Menus.cs`: player-facing interface
+
+## Student Work and AI Assistance
+
+Student-completed work:
+
+- Chose the final game concept, scope, and assessment direction.
+- Integrated the Unity project, scene, scripts, assets, and documentation into one playable build.
+- Directed gameplay decisions such as key-and-exit objectives, floor progression, upgrade choices, enemy roles, and presentation focus.
+- Performed manual testing and accepted responsibility for the final submitted project.
+
+AI-assisted work:
+
+- Helped brainstorm improvements, issue text, documentation structure, and presentation wording.
+- Helped draft concise code comments and academic transparency notes.
+- Helped review code organization and identify places where explanation was useful.
+- Did not replace student review, testing, or final design ownership.
 
 ## Art
 
