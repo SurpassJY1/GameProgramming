@@ -24,11 +24,54 @@ AI assistance was used as a tool, not as an external asset pack or copied third-
 
 ## Art
 
-Most visuals are generated procedurally in `Assets/Scripts/Art2D.cs`:
+Primary gameplay and UI visuals now use third-party CC0 assets loaded from
+`Assets/StreamingAssets/thirdparty/`.
+
+Several high-readability gameplay sprites are project-generated original art created specifically
+for this module after testing showed the third-party tiles were not visually clear enough in game:
+
+- License/status: original project work; no external image license required
+- Local files used:
+  - `Assets/StreamingAssets/generated/clear-dungeon/player.png`
+  - `Assets/StreamingAssets/generated/clear-dungeon/floor_tile.png`
+  - `Assets/StreamingAssets/generated/clear-dungeon/wall_tile.png`
+  - `Assets/StreamingAssets/generated/clear-dungeon/key.png`
+  - `Assets/StreamingAssets/generated/clear-dungeon/exit_door.png`
+- Purpose:
+  - `wall_tile.png` is the normal wall sprite.
+  - `floor_tile.png` is the normal floor/background tile.
+  - `key.png` is the normal collectible key sprite.
+  - `exit_door.png` is the normal exit door sprite.
+  - `player.png` is the normal player sprite.
+
+Kenney Tiny Dungeon:
+
+- Author: Kenney
+- Source: `https://kenney.nl/assets/tiny-dungeon`
+- License: Creative Commons Zero (CC0 1.0)
+- Local license copy: `Assets/StreamingAssets/thirdparty/kenney-tiny-dungeon/License.txt`
+- Local files used:
+  - `Assets/StreamingAssets/thirdparty/kenney-tiny-dungeon/tiles/*.png`
+  - `Assets/StreamingAssets/thirdparty/kenney-tiny-dungeon/Tilemap/tilemap.png`
+
+Kenney UI Pack:
+
+- Author: Kenney
+- Source: `https://kenney.nl/assets/ui-pack`
+- License: Creative Commons Zero (CC0 1.0)
+- Local license copy: `Assets/StreamingAssets/thirdparty/kenney-ui-pack/License.txt`
+- Local files used:
+  - `Assets/StreamingAssets/thirdparty/kenney-ui-pack/png/Blue/Default/button_rectangle_depth_flat.png`
+  - `Assets/StreamingAssets/thirdparty/kenney-ui-pack/png/Blue/Default/button_square_depth_flat.png`
+  - `Assets/StreamingAssets/thirdparty/kenney-ui-pack/png/Extra/Default/input_rectangle.png`
+  - `Assets/StreamingAssets/thirdparty/kenney-ui-pack/png/Extra/Default/divider.png`
+  - `Assets/StreamingAssets/thirdparty/kenney-ui-pack/png/Extra/Default/icon_play_light.png`
+
+Procedural visuals remain in `Assets/Scripts/Art2D.cs` only as fallback/generated effects:
 
 - `SolidCircle` for particle/fallback shapes
-- `Diamond` for key and fallback guard shape
-- `Square` for walls, floor, and exit door
+- `SoftRectangle`, `Diamond`, `Square`, `Key`, `ExitGate`, and enemy icons when an external file is missing
+- Weapon/passive upgrade icons and small transient VFX
 
 Project-generated selected sprites are original project work for this module and do not require an external image license:
 
@@ -60,13 +103,56 @@ Third-party fallback sprites are from Kenney Topdown Shooter:
 
 ## Audio
 
-All sounds are synthesized at runtime in `Assets/Scripts/Art2D.cs`:
+Primary sound effects use third-party CC0 assets loaded from `Assets/StreamingAssets/thirdparty/`.
+
+Kenney Interface Sounds:
+
+- Author: Kenney
+- Source: `https://kenney.nl/assets/interface-sounds`
+- License: Creative Commons Zero (CC0 1.0)
+- Local license copy: `Assets/StreamingAssets/thirdparty/kenney-audio/interface/License.txt`
+- Local files used:
+  - `Assets/StreamingAssets/thirdparty/kenney-audio/interface/Audio/click_002.ogg`
+  - `Assets/StreamingAssets/thirdparty/kenney-audio/interface/Audio/confirmation_001.ogg`
+  - `Assets/StreamingAssets/thirdparty/kenney-audio/interface/Audio/select_003.ogg`
+
+Kenney RPG Audio:
+
+- Author: Kenney
+- Source: `https://kenney.nl/assets/rpg-audio`
+- License: Creative Commons Zero (CC0 1.0)
+- Local license copy: `Assets/StreamingAssets/thirdparty/kenney-audio/rpg/License.txt`
+- Local files used:
+  - `Assets/StreamingAssets/thirdparty/kenney-audio/rpg/Audio/handleCoins.ogg`
+  - `Assets/StreamingAssets/thirdparty/kenney-audio/rpg/Audio/knifeSlice.ogg`
+  - `Assets/StreamingAssets/thirdparty/kenney-audio/rpg/Audio/doorOpen_1.ogg`
+
+Kenney Impact Sounds:
+
+- Author: Kenney
+- Source: `https://kenney.nl/assets/impact-sounds`
+- License: Creative Commons Zero (CC0 1.0)
+- Local license copy: `Assets/StreamingAssets/thirdparty/kenney-audio/impact/License.txt`
+- Local files used:
+  - `Assets/StreamingAssets/thirdparty/kenney-audio/impact/Audio/impactPunch_heavy_000.ogg`
+  - `Assets/StreamingAssets/thirdparty/kenney-audio/impact/Audio/impactMetal_light_000.ogg`
+  - `Assets/StreamingAssets/thirdparty/kenney-audio/impact/Audio/impactGeneric_light_000.ogg`
+
+Background music:
+
+- Track: `"8bit Dungeon Level"`
+- Author: Kevin MacLeod (`incompetech.com`)
+- Source: `https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1200066`
+- License: Creative Commons Attribution 4.0
+- Required attribution: `"8bit Dungeon Level" Kevin MacLeod (incompetech.com), Licensed under Creative Commons: By Attribution 4.0 License, http://creativecommons.org/licenses/by/4.0/`
+- Local file: `Assets/StreamingAssets/thirdparty/incompetech/8bit-dungeon-level.mp3`
+- Local attribution copy: `Assets/StreamingAssets/thirdparty/incompetech/ATTRIBUTION.txt`
+
+Synthesized sounds remain in `Assets/Scripts/Art2D.cs` only as fallback if external audio files are missing:
 
 - `Tone` for menu button feedback
 - `Noise` for damage feedback
 - `Chime` for key pickup and victory feedback
-
-No external music, sound libraries, or audio clips are used.
 
 ## Fonts
 
@@ -84,4 +170,5 @@ Unity `2022.3.62f1` and packages in `Packages/manifest.json` are used under Unit
 
 ## Notes
 
-Third-party assets are limited to clearly documented free sprites with source and license notes in both this file and `README.md`.
+Third-party assets are limited to clearly documented free sprites and audio with source and license notes in this file and a short summary in `README.md`.
+Project-generated sprites are listed separately above so they are not mistaken for external asset-pack work.
