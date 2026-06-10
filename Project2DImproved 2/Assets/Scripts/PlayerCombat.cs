@@ -1,6 +1,14 @@
 using UnityEngine;
 
-/// Mouse-aimed combat controller for the top-down player.
+/// Mouse-aimed combat controller for the player.
+/// Weapon upgrades change the values stored here; each spawned Bullet receives a snapshot of the
+/// current build so existing bullets do not change mid-flight.
+///
+/// Authorship note:
+/// - Student-owned implementation: shooting behaviour, upgrade effects, and final integration with
+///   the level-up flow.
+/// - AI-assisted support: review suggestions and comment wording that explain how upgrade values
+///   are transferred into projectile instances.
 public class PlayerCombat : MonoBehaviour
 {
     [Header("Shooting")]
@@ -105,6 +113,7 @@ public class PlayerCombat : MonoBehaviour
 
     public void ApplyUpgrade(WeaponUpgradeKind upgrade)
     {
+        // Upgrade effects are capped to avoid runaway values during longer floor runs.
         switch (upgrade)
         {
             case WeaponUpgradeKind.ExtraProjectile:
@@ -146,6 +155,8 @@ public class PlayerCombat : MonoBehaviour
 
     void ResetForNewRun()
     {
+        // Weapon upgrades are run-scoped. Starting a new run restores the baseline so repeated
+        // demonstrations always begin from the same readable state.
         fireCooldown = baseFireCooldown;
         damage = baseDamage;
         extraProjectiles = 0;
@@ -171,6 +182,7 @@ public class PlayerCombat : MonoBehaviour
             return;
         }
 
+        // Extra projectiles are spread symmetrically around the current mouse aim direction.
         float totalSpread = spreadAngle * (projectileCount - 1);
         float startAngle = -totalSpread * 0.5f;
         for (int i = 0; i < projectileCount; i++)
@@ -194,6 +206,7 @@ public class PlayerCombat : MonoBehaviour
         Bullet projectile = bullet.GetComponent<Bullet>();
         if (projectile != null)
         {
+            // Copy the active weapon build into the projectile so Bullet only handles hit logic.
             projectile.speed = bulletSpeed;
             projectile.damage = damage;
             projectile.lifetime = bulletLifetime;

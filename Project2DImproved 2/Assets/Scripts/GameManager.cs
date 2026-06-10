@@ -1,7 +1,15 @@
 using System;
 using UnityEngine;
 
-/// Central state for the Dungeon Key Run vertical slice.
+/// Central run state for Dungeon Key Run.
+/// Other scripts report gameplay events here; this class decides phase changes, progression,
+/// upgrade application, and HUD/menu notifications.
+///
+/// Authorship note:
+/// - Student-owned implementation: final game flow, run state, floor progression, XP values,
+///   upgrade rules, and integration with player/UI scripts.
+/// - AI-assisted support: review suggestions and comment/documentation wording. The final logic
+///   remains student-reviewed and accepted for the submitted project.
 public class GameManager : MonoBehaviour
 {
     public static GameManager I { get; private set; }
@@ -88,6 +96,8 @@ public class GameManager : MonoBehaviour
 
     public void StartGame()
     {
+        // A run reset is stronger than a floor reset: it clears all run-scoped upgrades, XP,
+        // floor number, elapsed time, and key state before rebuilding Floor 1.
         hasKey = false;
         elapsed = 0f;
         countedTutorialSuccessThisRun = false;
@@ -96,6 +106,7 @@ public class GameManager : MonoBehaviour
         objective = FloorObjective();
         phase = Phase.Playing;
         Time.timeScale = 1f;
+        // Event order matters: listeners reset run-scoped state before the first floor is rebuilt.
         OnGameStarted?.Invoke();
         OnFloorStarted?.Invoke();
         OnStateChanged?.Invoke();
@@ -121,6 +132,8 @@ public class GameManager : MonoBehaviour
             return;
         }
 
+        // Clearing a floor pauses the action and lets the player choose a passive upgrade before
+        // the next floor is generated.
         BeginPassiveUpgrade();
     }
 
@@ -156,6 +169,7 @@ public class GameManager : MonoBehaviour
         if (phase != Phase.Playing || amount <= 0) return;
 
         currentXP += amount;
+        // Level-ups interrupt gameplay so the upgrade UI can be read and selected safely.
         if (currentXP >= xpToNextLevel) BeginLevelUp();
         else OnStateChanged?.Invoke();
     }
@@ -271,6 +285,9 @@ public class GameManager : MonoBehaviour
 
     void ResetRunProgress()
     {
+        // These values are intentionally stored in GameManager rather than scattered through UI,
+        // player, and enemy scripts. That makes the HUD and upgrade screens read from one source of
+        // truth and makes a restart predictable.
         startLives = Mathf.Max(1, baseStartLives);
         playerLevel = Mathf.Max(1, startingLevel);
         currentFloor = 1;
@@ -296,6 +313,8 @@ public class GameManager : MonoBehaviour
 
     void BeginLevelUp()
     {
+        // Weapon upgrades are XP-based and can happen mid-floor. Gameplay pauses so the player can
+        // make a deliberate choice instead of being hit while reading the cards.
         currentXP -= xpToNextLevel;
         playerLevel++;
         xpToNextLevel = CalculateXPToNextLevel(playerLevel);
@@ -308,6 +327,8 @@ public class GameManager : MonoBehaviour
 
     void BeginPassiveUpgrade()
     {
+        // Passive upgrades are floor-clear rewards. This separates moment-to-moment combat growth
+        // from longer run survivability choices such as lives, speed, fire rate, and XP gain.
         floorsCleared++;
         RecordTutorialSuccessIfNeeded();
         objective = "Floor " + currentFloor + " cleared! Choose a passive upgrade.";
@@ -320,6 +341,7 @@ public class GameManager : MonoBehaviour
 
     void StartNextFloor()
     {
+        // A new floor keeps run upgrades and lives, but resets the floor key objective.
         currentFloor++;
         hasKey = false;
         objective = FloorObjective();

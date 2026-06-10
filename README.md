@@ -29,6 +29,20 @@ The scene uses `GameBootstrap.cs` to build the full level at runtime and load se
 - Runtime-generated sound effects
 - Documentation for concept, sprint planning, testing, report, presentation, and credits
 
+## Authorship and AI Assistance
+
+Student-completed work:
+
+- Final game concept, Unity project integration, gameplay direction, testing, and presentation decisions.
+- Review and ownership of the submitted build, including code, assets, documentation, and credits.
+
+AI-assisted work:
+
+- Brainstorming improvements, drafting GitHub issue text, reviewing code readability, and refining documentation.
+- Drafting concise comments and academic transparency wording, which were reviewed before inclusion.
+
+AI assistance was used as a development aid. It did not replace student review, testing, final design decisions, or responsibility for the submission.
+
 ## Project Structure
 
 ```text

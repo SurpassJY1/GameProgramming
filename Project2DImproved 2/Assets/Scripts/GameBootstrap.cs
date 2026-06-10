@@ -2,7 +2,14 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 
-/// Builds the Dungeon Key Run vertical slice at runtime from simple primitives.
+/// Builds the Dungeon Key Run scene at runtime so the submitted project does not depend on
+/// manually configured prefabs. This script owns layout, spawned actors, UI, and sprite fallback.
+///
+/// Authorship note:
+/// - Student-owned implementation: runtime scene construction, floor layout rules, enemy setup,
+///   asset fallback choices, and final integration into the Unity project.
+/// - AI-assisted support: review suggestions and comment/documentation wording used to make the
+///   system easier to explain for assessment. The final code was reviewed as part of the submission.
 public class GameBootstrap : MonoBehaviour
 {
     const int WallLayer = 8;
@@ -62,6 +69,8 @@ public class GameBootstrap : MonoBehaviour
         }
     }
 
+    // EnemyConfig keeps progression data in one place: each enemy type unlocks on a floor,
+    // then contributes stats, XP value, sprite choice, and optional ability behaviour.
     struct EnemyConfig
     {
         public EnemyKind kind;
@@ -132,6 +141,8 @@ public class GameBootstrap : MonoBehaviour
         new EnemyConfig(EnemyKind.CrystalBrute, "Crystal Brute", 10, 2.8f, 0.72f, 1.08f, 4.0f, 2.6f, null, 1.12f, elite: true)
     };
 
+    // Four room variants rotate by floor number. The run can continue indefinitely while still
+    // keeping the authored route planning layout readable for a short presentation demo.
     struct RoomVariant
     {
         public Vector3 playerStart;
@@ -221,6 +232,12 @@ public class GameBootstrap : MonoBehaviour
 
     void BuildFloor(int floor)
     {
+        // Floor rebuild flow:
+        // 1. Remove the previous generated floor root.
+        // 2. Select one of the authored room variants.
+        // 3. Move the player to that room's start.
+        // 4. Rebuild floor tiles, walls, key, exit, and floor-scaled enemies.
+        // This keeps each floor self-contained and avoids stale objects carrying into the next room.
         if (currentFloorRoot != null)
         {
             currentFloorRoot.SetActive(false);
@@ -252,6 +269,8 @@ public class GameBootstrap : MonoBehaviour
         BuildKey(room.keyPosition);
         BuildExit(room.exitPosition);
 
+        // Later floors add enemies and unlock stronger enemy types, but the same key-to-exit
+        // objective remains so the core rule is easy to understand.
         int enemyCount = EnemyCountForFloor(floor);
         for (int i = 0; i < enemyCount; i++)
         {
@@ -263,6 +282,9 @@ public class GameBootstrap : MonoBehaviour
 
     RoomVariant GetRoomVariant(int floor)
     {
+        // Authored layouts are stored as data instead of Unity prefabs so the design is visible in
+        // one script. The modulo rotation gives repeated runs variety without adding procedural
+        // generation risk right before the presentation.
         switch ((floor - 1) % 4)
         {
             case 1:
@@ -543,12 +565,16 @@ public class GameBootstrap : MonoBehaviour
     {
         if (floor <= 1) return EnemyKind.SlimeScout;
 
+        // Guarantee that a newly unlocked enemy appears at least once on its first floor.
+        // This makes progression visible during testing and presentation.
         if (enemyIndex == 0)
         {
             for (int i = 0; i < EnemyConfigs.Length; i++)
                 if (EnemyConfigs[i].unlockFloor == floor) return EnemyConfigs[i].kind;
         }
 
+        // After the guaranteed slot, use deterministic weighted selection from unlocked enemies.
+        // Deterministic seeds keep a floor stable without storing extra random state.
         int totalWeight = 0;
         for (int i = 0; i < EnemyConfigs.Length; i++)
         {
@@ -616,6 +642,9 @@ public class GameBootstrap : MonoBehaviour
 
     void BuildEnemy(string name, EnemyKind kind, Transform player, Vector3 a, Vector3 b, int floor)
     {
+        // Enemy construction is split into data-driven setup and component setup:
+        // EnemyConfig decides what this enemy is, ApplyEnemyScaling decides how hard it is on this
+        // floor, and EnemyAbilityController is only added when the type needs a special behaviour.
         EnemyConfig config = GetEnemyConfig(kind);
         Vector2 safeA = ResolveFreeCirclePosition(new Vector2(a.x, a.y), 0.38f);
         Vector2 safeB = ResolveFreeCirclePosition(new Vector2(b.x, b.y), 0.38f);
@@ -658,6 +687,8 @@ public class GameBootstrap : MonoBehaviour
             config.healsAllies || config.summonsAllies || config.elite;
         if (!hasAbility) return;
 
+        // The base Enemy component handles movement and health. Special attacks live in a small
+        // companion component so simple early-floor enemies stay easy to inspect.
         EnemyAbilityController ability = enemy.AddComponent<EnemyAbilityController>();
         ability.owner = guard;
         ability.kind = config.kind;
@@ -693,6 +724,7 @@ public class GameBootstrap : MonoBehaviour
     void ApplyEnemyScaling(Enemy enemy, int floor, EnemyConfig config)
     {
         int floorIndex = Mathf.Max(0, floor - 1);
+        // Scaling is intentionally capped to keep endless-floor runs playable in a classroom demo.
         int healthGrowth = Mathf.FloorToInt(floorIndex * 1.15f) + Mathf.FloorToInt(floorIndex / 3f);
         enemy.maxHealth = Mathf.Min(MaxEnemyHealth, Mathf.Max(1, Mathf.RoundToInt((BaseEnemyHealth + healthGrowth) * config.healthMultiplier)));
         enemy.currentHealth = enemy.maxHealth;

@@ -9,6 +9,19 @@
 
 All gameplay code was written for this module project. No third-party C# gameplay code, starter kits, or copied tutorial projects are included.
 
+Student-completed work:
+
+- Final game concept, Unity project integration, gameplay direction, testing, and presentation decisions.
+- Core ownership of the submitted build, including reviewing and accepting all code and documentation changes.
+
+AI-assisted work:
+
+- Brainstorming and planning support.
+- Drafting and refining code comments, documentation wording, GitHub issue text, and presentation notes.
+- Review-style suggestions for readability, feature explanation, and academic transparency.
+
+AI assistance was used as a tool, not as an external asset pack or copied third-party project. The student remains responsible for the final implementation and submission.
+
 ## Art
 
 Most visuals are generated procedurally in `Assets/Scripts/Art2D.cs`:

@@ -1,7 +1,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// Combat projectile that moves forward, damages enemies, and stops at walls.
+/// Player projectile. It combines movement, wall/enemy hit detection, and upgrade effects
+/// such as pierce, burn, slow, and explosive damage.
+///
+/// Authorship note:
+/// - Student-owned implementation: projectile rules, collision behaviour, upgrade effect handling,
+///   and final integration with PlayerCombat.
+/// - AI-assisted support: review suggestions and explanatory comments for the hit-detection flow.
 public class Bullet : MonoBehaviour
 {
     public float speed = 14f;
@@ -34,6 +40,7 @@ public class Bullet : MonoBehaviour
         Vector2 direction = transform.up;
         float distance = speed * Time.deltaTime;
 
+        // Manual casts prevent fast bullets from tunnelling through small enemies or walls.
         RaycastHit2D wallHit = wallMask.value != 0
             ? Physics2D.CircleCast(current, radius, direction, distance, wallMask)
             : default;
@@ -99,6 +106,7 @@ public class Bullet : MonoBehaviour
     {
         if (enemy == null || hitEnemies.Contains(enemy)) return;
 
+        // Track hit enemies so piercing shots cannot damage the same target repeatedly.
         hitEnemies.Add(enemy);
         enemy.TakeDamage(damage, transform.position);
 
@@ -120,6 +128,8 @@ public class Bullet : MonoBehaviour
 
     void Explode(Vector3 position)
     {
+        // Explosive Shot is optional. When inactive, radius/damage stay at zero and this method
+        // exits immediately, so normal bullets do not need a separate class.
         if (explosionRadius <= 0f || explosionDamage <= 0) return;
 
         Collider2D[] hits = Physics2D.OverlapCircleAll(position, explosionRadius);
