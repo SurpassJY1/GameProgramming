@@ -75,18 +75,6 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
-        if (phase == Phase.LevelUp)
-        {
-            HandleWeaponUpgradeDebugInput();
-            return;
-        }
-
-        if (phase == Phase.PassiveUpgrade)
-        {
-            HandlePassiveUpgradeDebugInput();
-            return;
-        }
-
         if (phase != Phase.Playing) return;
 
         elapsed += Time.deltaTime;
@@ -540,13 +528,6 @@ public class GameManager : MonoBehaviour
         return string.IsNullOrEmpty(summary) ? item : summary + " / " + item;
     }
 
-    void HandleWeaponUpgradeDebugInput()
-    {
-        if (Input.GetKeyDown(KeyCode.Alpha1)) ChooseUpgrade(WeaponUpgradeKind.ExtraProjectile);
-        else if (Input.GetKeyDown(KeyCode.Alpha2)) ChooseUpgrade(WeaponUpgradeKind.RapidFire);
-        else if (Input.GetKeyDown(KeyCode.Alpha3)) ChooseUpgrade(WeaponUpgradeKind.DamageUp);
-    }
-
     string PassiveUpgradeDisplayName(PassiveUpgradeKind upgrade)
     {
         switch (upgrade)
@@ -559,13 +540,6 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    void HandlePassiveUpgradeDebugInput()
-    {
-        if (Input.GetKeyDown(KeyCode.Alpha1)) ChoosePassiveUpgrade(PassiveUpgradeKind.MaxLivesUp);
-        else if (Input.GetKeyDown(KeyCode.Alpha2)) ChoosePassiveUpgrade(PassiveUpgradeKind.MoveSpeedUp);
-        else if (Input.GetKeyDown(KeyCode.Alpha3)) ChoosePassiveUpgrade(PassiveUpgradeKind.FireCooldownBonus);
-        else if (Input.GetKeyDown(KeyCode.Alpha4)) ChoosePassiveUpgrade(PassiveUpgradeKind.XPBonus);
-    }
 }
 
 /// Run-scoped weapon upgrade choices offered when the player levels up.
