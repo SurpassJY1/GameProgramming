@@ -13,22 +13,35 @@ using UnityEngine.EventSystems;
 public class GameBootstrap : MonoBehaviour
 {
     const int WallLayer = 8;
+    const string ClearDungeonBasePath = "generated/clear-dungeon/";
     const string PixelCuteBasePath = "generated/pixel-cute-dungeon/selected/";
-    const string PlayerSpritePath = PixelCuteBasePath + "player.png";
-    const string EnemySpritePath = PixelCuteBasePath + "enemy.png";
-    const string FloorSpritePath = PixelCuteBasePath + "floor_tile.png";
-    const string WallSpritePath = PixelCuteBasePath + "wall_tile.png";
-    const string KeySpritePath = PixelCuteBasePath + "key.png";
-    const string ExitSpritePath = PixelCuteBasePath + "exit_gate.png";
-    const string ProjectileSpritePath = PixelCuteBasePath + "projectile.png";
-    const string UiPanelSpritePath = PixelCuteBasePath + "ui_panel.png";
-    const string UiButtonSpritePath = PixelCuteBasePath + "ui_button.png";
+    const string PixelCuteProjectileSpritePath = PixelCuteBasePath + "projectile.png";
+    const string TinyDungeonBasePath = "thirdparty/kenney-tiny-dungeon/tiles/";
+    const string PlayerSpritePath = ClearDungeonBasePath + "player.png";
+    const string EnemySpritePath = TinyDungeonBasePath + "tile_0084.png";
+    const string FloorSpritePath = ClearDungeonBasePath + "floor_tile.png";
+    const string WallSpritePath = ClearDungeonBasePath + "wall_tile.png";
+    const string KeySpritePath = ClearDungeonBasePath + "key.png";
+    const string ExitSpritePath = ClearDungeonBasePath + "exit_door.png";
+    const string ProjectileSpritePath = TinyDungeonBasePath + "tile_0126.png";
+    const string UiPanelSpritePath = "thirdparty/kenney-ui-pack/png/Extra/Default/input_rectangle.png";
+    const string UiButtonSpritePath = "thirdparty/kenney-ui-pack/png/Blue/Default/button_rectangle_depth_flat.png";
     const string KenneyPlayerSpritePath = "thirdparty/topdown-shooter/player.png";
     const string KenneyEnemySpritePath = "thirdparty/topdown-shooter/enemy.png";
     const string KenneyFloorSpritePath = "thirdparty/topdown-shooter/floor_tile.png";
     const string KenneyWallSpritePath = "thirdparty/topdown-shooter/wall_tile.png";
-    const float PixelTilePixelsPerUnit = 32f;
-    const float PixelActorPixelsPerUnit = 48f;
+    const string MenuClickAudioPath = "thirdparty/kenney-audio/interface/Audio/click_002.ogg";
+    const string ConfirmAudioPath = "thirdparty/kenney-audio/interface/Audio/confirmation_001.ogg";
+    const string ShootAudioPath = "thirdparty/kenney-audio/rpg/Audio/knifeSlice.ogg";
+    const string KeyAudioPath = "thirdparty/kenney-audio/rpg/Audio/handleCoins.ogg";
+    const string HitAudioPath = "thirdparty/kenney-audio/impact/Audio/impactPunch_heavy_000.ogg";
+    const string BulletImpactAudioPath = "thirdparty/kenney-audio/impact/Audio/impactMetal_light_000.ogg";
+    const string EnemyDefeatAudioPath = "thirdparty/kenney-audio/impact/Audio/impactGeneric_light_000.ogg";
+    const string ExitAudioPath = "thirdparty/kenney-audio/rpg/Audio/doorOpen_1.ogg";
+    const string MusicAudioPath = "thirdparty/incompetech/8bit-dungeon-level.mp3";
+    const float ClearDungeonPixelsPerUnit = 32f;
+    const float PixelTilePixelsPerUnit = 16f;
+    const float PixelActorPixelsPerUnit = 16f;
     const float KenneyTilePixelsPerUnit = 64f;
     const int BaseEnemyCount = 3;
     const int MaxEnemyCount = 14;
@@ -129,16 +142,16 @@ public class GameBootstrap : MonoBehaviour
 
     static readonly EnemyConfig[] EnemyConfigs =
     {
-        new EnemyConfig(EnemyKind.SlimeScout, "Slime Scout", 1, 0.85f, 0.85f, 0.86f, 2.8f, 0.85f, null, 0.82f),
-        new EnemyConfig(EnemyKind.TinyBat, "Tiny Bat", 2, 0.65f, 1.35f, 1.42f, 4.0f, 0.95f, null, 0.72f),
-        new EnemyConfig(EnemyKind.ShieldGuard, "Shield Guard", 3, 1.75f, 0.7f, 0.76f, 3.0f, 1.35f, null, 0.95f),
-        new EnemyConfig(EnemyKind.SparkSpitter, "Spark Spitter", 4, 1.05f, 0.78f, 0.72f, 4.7f, 1.35f, null, 0.84f, hasRangedAttack: true),
-        new EnemyConfig(EnemyKind.BombSprite, "Bomb Sprite", 5, 1.0f, 0.74f, 0.95f, 3.7f, 1.25f, null, 0.88f, explodesOnProximity: true),
-        new EnemyConfig(EnemyKind.FrostWisp, "Frost Wisp", 6, 1.1f, 0.95f, 0.94f, 4.4f, 1.45f, null, 0.82f, hasRangedAttack: true),
-        new EnemyConfig(EnemyKind.DashImp, "Dash Imp", 7, 1.2f, 1.02f, 1.12f, 4.2f, 1.55f, null, 0.86f, hasDashAttack: true),
-        new EnemyConfig(EnemyKind.HealerFairy, "Healer Fairy", 8, 0.9f, 0.92f, 0.88f, 3.5f, 1.65f, null, 0.78f, healsAllies: true),
-        new EnemyConfig(EnemyKind.SummonerShade, "Summoner Shade", 9, 1.35f, 0.72f, 0.8f, 4.4f, 1.9f, null, 0.92f, summonsAllies: true),
-        new EnemyConfig(EnemyKind.CrystalBrute, "Crystal Brute", 10, 2.8f, 0.72f, 1.08f, 4.0f, 2.6f, null, 1.12f, elite: true)
+        new EnemyConfig(EnemyKind.SlimeScout, "Slime Scout", 1, 0.85f, 0.85f, 0.86f, 2.8f, 0.85f, TinyDungeonBasePath + "tile_0084.png", 0.82f),
+        new EnemyConfig(EnemyKind.TinyBat, "Tiny Bat", 2, 0.65f, 1.35f, 1.42f, 4.0f, 0.95f, TinyDungeonBasePath + "tile_0085.png", 0.72f),
+        new EnemyConfig(EnemyKind.ShieldGuard, "Shield Guard", 3, 1.75f, 0.7f, 0.76f, 3.0f, 1.35f, TinyDungeonBasePath + "tile_0096.png", 0.95f),
+        new EnemyConfig(EnemyKind.SparkSpitter, "Spark Spitter", 4, 1.05f, 0.78f, 0.72f, 4.7f, 1.35f, TinyDungeonBasePath + "tile_0097.png", 0.84f, hasRangedAttack: true),
+        new EnemyConfig(EnemyKind.BombSprite, "Bomb Sprite", 5, 1.0f, 0.74f, 0.95f, 3.7f, 1.25f, TinyDungeonBasePath + "tile_0100.png", 0.88f, explodesOnProximity: true),
+        new EnemyConfig(EnemyKind.FrostWisp, "Frost Wisp", 6, 1.1f, 0.95f, 0.94f, 4.4f, 1.45f, TinyDungeonBasePath + "tile_0099.png", 0.82f, hasRangedAttack: true),
+        new EnemyConfig(EnemyKind.DashImp, "Dash Imp", 7, 1.2f, 1.02f, 1.12f, 4.2f, 1.55f, TinyDungeonBasePath + "tile_0086.png", 0.86f, hasDashAttack: true),
+        new EnemyConfig(EnemyKind.HealerFairy, "Healer Fairy", 8, 0.9f, 0.92f, 0.88f, 3.5f, 1.65f, TinyDungeonBasePath + "tile_0087.png", 0.78f, healsAllies: true),
+        new EnemyConfig(EnemyKind.SummonerShade, "Summoner Shade", 9, 1.35f, 0.72f, 0.8f, 4.4f, 1.9f, TinyDungeonBasePath + "tile_0108.png", 0.92f, summonsAllies: true),
+        new EnemyConfig(EnemyKind.CrystalBrute, "Crystal Brute", 10, 2.8f, 0.72f, 1.08f, 4.0f, 2.6f, TinyDungeonBasePath + "tile_0110.png", 1.12f, elite: true)
     };
 
     // Four room variants rotate by floor number. The run can continue indefinitely while still
@@ -165,6 +178,7 @@ public class GameBootstrap : MonoBehaviour
     {
         BuildCamera();
         BuildGameManager();
+        BuildMusicController();
         GameObject player = BuildPlayer();
         playerTransform = player.transform;
         playerController = player.GetComponent<Player>();
@@ -203,8 +217,13 @@ public class GameBootstrap : MonoBehaviour
 
     void BuildGameManager()
     {
-        if (GameManager.I != null) return;
-        new GameObject("GameManager").AddComponent<GameManager>();
+        if (GameManager.I == null) new GameObject("GameManager").AddComponent<GameManager>();
+        if (GameManager.I != null && GameManager.I.GetComponent<RunEventAudio>() == null)
+        {
+            RunEventAudio eventAudio = GameManager.I.gameObject.AddComponent<RunEventAudio>();
+            eventAudio.floorClearedClip = LoadOggClip(ConfirmAudioPath) ?? LoadOggClip(ExitAudioPath);
+            eventAudio.runEndedClip = LoadOggClip(HitAudioPath);
+        }
     }
 
     Sprite LoadWorldSprite(string primaryPath, float primaryPixelsPerUnit, string fallbackPath, float fallbackPixelsPerUnit)
@@ -222,6 +241,35 @@ public class GameBootstrap : MonoBehaviour
     Sprite LoadUiSprite(string path)
     {
         return Art2D.FromPngFile(path, 100f);
+    }
+
+    AudioClip LoadOggClip(string path)
+    {
+        return Art2D.FromAudioFile(path, AudioType.OGGVORBIS);
+    }
+
+    AudioClip LoadMp3Clip(string path)
+    {
+        return Art2D.FromAudioFile(path, AudioType.MPEG);
+    }
+
+    void BuildMusicController()
+    {
+        AudioClip music = LoadMp3Clip(MusicAudioPath);
+        if (music == null) return;
+
+        GameObject musicObject = new GameObject("Licensed Background Music");
+        AudioSource musicSource = musicObject.AddComponent<AudioSource>();
+        musicSource.clip = music;
+        musicSource.loop = true;
+        musicSource.volume = 0.24f;
+        musicSource.playOnAwake = false;
+
+        RuntimeMusicController controller = musicObject.AddComponent<RuntimeMusicController>();
+        controller.source = musicSource;
+        controller.menuVolume = 0.16f;
+        controller.playingVolume = 0.24f;
+        controller.pausedVolume = 0.08f;
     }
 
     void BuildCurrentFloor()
@@ -250,9 +298,9 @@ public class GameBootstrap : MonoBehaviour
         if (playerController != null) playerController.ResetForNewFloor(room.playerStart);
         else if (playerTransform != null) playerTransform.position = room.playerStart;
 
-        Sprite floorSprite = LoadWorldSprite(FloorSpritePath, PixelTilePixelsPerUnit, KenneyFloorSpritePath, KenneyTilePixelsPerUnit)
+        Sprite floorSprite = LoadWorldSprite(FloorSpritePath, ClearDungeonPixelsPerUnit, KenneyFloorSpritePath, KenneyTilePixelsPerUnit)
             ?? Art2D.SoftRectangle(new Color(0.17f, 0.17f, 0.2f), new Color(0.08f, 0.09f, 0.12f), 100, 100);
-        Sprite wallSprite = LoadWorldSprite(WallSpritePath, PixelTilePixelsPerUnit, KenneyWallSpritePath, KenneyTilePixelsPerUnit)
+        Sprite wallSprite = LoadWorldSprite(WallSpritePath, ClearDungeonPixelsPerUnit, KenneyWallSpritePath, KenneyTilePixelsPerUnit)
             ?? Art2D.Square(new Color(0.75f, 0.75f, 0.75f));
         BuildAmbientBackdrop();
         BuildTiledFloor(floorSprite);
@@ -383,8 +431,8 @@ public class GameBootstrap : MonoBehaviour
                 SpriteRenderer sr = tile.AddComponent<SpriteRenderer>();
                 sr.sprite = floorSprite;
                 sr.sortingOrder = -5;
-                float checker = ((x + y) & 1) == 0 ? 1f : 0.96f;
-                sr.color = new Color(checker, checker, checker, 1f);
+                float checker = ((x + y) & 1) == 0 ? 0.96f : 0.88f;
+                sr.color = new Color(checker, checker, checker + 0.02f, 1f);
                 tile.transform.localScale = Vector3.one;
             }
         }
@@ -423,7 +471,7 @@ public class GameBootstrap : MonoBehaviour
         backing.transform.localPosition = Vector3.zero;
         backing.transform.localScale = new Vector3(size.x + 0.08f, size.y + 0.08f, 1f);
         SpriteRenderer backingRenderer = backing.AddComponent<SpriteRenderer>();
-        backingRenderer.sprite = Art2D.SoftRectangle(new Color(0.18f, 0.13f, 0.25f), new Color(0.08f, 0.06f, 0.12f), 100, 100);
+        backingRenderer.sprite = Art2D.SoftRectangle(new Color(0.08f, 0.06f, 0.12f), new Color(0.02f, 0.018f, 0.035f), 100, 100);
         backingRenderer.sortingOrder = -2;
 
         // Build wall visuals from tiled sprites so walls stay crisp and readable.
@@ -445,7 +493,7 @@ public class GameBootstrap : MonoBehaviour
                 SpriteRenderer sr = tile.AddComponent<SpriteRenderer>();
                 sr.sprite = wallSprite;
                 sr.sortingOrder = -1;
-                sr.color = Color.white;
+                sr.color = new Color(0.72f, 0.76f, 0.88f, 1f);
             }
         }
     }
@@ -454,10 +502,10 @@ public class GameBootstrap : MonoBehaviour
     {
         GameObject go = new GameObject("Player");
         go.transform.position = new Vector3(-5.6f, -3.2f, 0f);
-        go.transform.localScale = Vector3.one * 0.9f;
+        go.transform.localScale = Vector3.one * 1.08f;
         AddShadow(go.transform, new Vector2(0f, -0.34f), new Vector3(0.95f, 0.34f, 1f), -0.02f);
         SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
-        sr.sprite = LoadWorldSprite(PlayerSpritePath, PixelActorPixelsPerUnit, KenneyPlayerSpritePath, 100f)
+        sr.sprite = LoadWorldSprite(PlayerSpritePath, ClearDungeonPixelsPerUnit, KenneyPlayerSpritePath, 100f)
             ?? Art2D.SolidCircle(new Color(0.45f, 0.95f, 0.55f));
         sr.sortingOrder = 3;
         CircleCollider2D col = go.AddComponent<CircleCollider2D>();
@@ -468,16 +516,16 @@ public class GameBootstrap : MonoBehaviour
         rb.gravityScale = 0f;
         Player player = go.AddComponent<Player>();
         player.wallMask = 1 << WallLayer;
-        player.keyClip = Art2D.Chime(660f, 0.35f);
-        player.hitClip = Art2D.Noise(0.25f, 12f);
-        player.winClip = Art2D.Chime(880f, 0.6f);
+        player.keyClip = LoadOggClip(KeyAudioPath) ?? Art2D.Chime(660f, 0.35f);
+        player.hitClip = LoadOggClip(HitAudioPath) ?? Art2D.Noise(0.25f, 12f);
+        player.winClip = LoadOggClip(ConfirmAudioPath) ?? LoadOggClip(ExitAudioPath) ?? Art2D.Chime(880f, 0.6f);
         PlayerCombat combat = go.AddComponent<PlayerCombat>();
         combat.fireCooldown = 0.22f;
         combat.bulletSpeed = 12f;
         combat.damage = 1;
         combat.bulletLifetime = 1.2f;
         combat.bulletPrefab = BuildPlayerBulletPrefab();
-        combat.shootClip = Art2D.Tone(920f, 0.08f, 22f);
+        combat.shootClip = LoadOggClip(ShootAudioPath) ?? Art2D.Tone(920f, 0.08f, 22f);
 
         SmoothCameraFollow follow = Camera.main != null ? Camera.main.GetComponent<SmoothCameraFollow>() : null;
         if (follow != null) follow.target = go.transform;
@@ -491,7 +539,9 @@ public class GameBootstrap : MonoBehaviour
         bullet.transform.localScale = new Vector3(0.58f, 0.42f, 1f);
 
         SpriteRenderer sr = bullet.AddComponent<SpriteRenderer>();
-        sr.sprite = LoadPixelSprite(ProjectileSpritePath, 64f) ?? Art2D.Projectile();
+        sr.sprite = LoadPixelSprite(ProjectileSpritePath, 16f)
+            ?? LoadPixelSprite(PixelCuteProjectileSpritePath, 64f)
+            ?? Art2D.Projectile();
         sr.sortingOrder = 4;
 
         CircleCollider2D collider = bullet.AddComponent<CircleCollider2D>();
@@ -504,6 +554,7 @@ public class GameBootstrap : MonoBehaviour
 
         Bullet projectile = bullet.AddComponent<Bullet>();
         projectile.wallMask = 1 << WallLayer;
+        projectile.impactClip = LoadOggClip(BulletImpactAudioPath);
         return bullet;
     }
 
@@ -516,7 +567,7 @@ public class GameBootstrap : MonoBehaviour
         key.transform.localScale = Vector3.one * 0.45f;
         AddGlow(key.transform, new Color(1f, 0.76f, 0.16f, 0.28f), new Vector3(2.2f, 2.2f, 1f), 0);
         SpriteRenderer sr = key.AddComponent<SpriteRenderer>();
-        sr.sprite = LoadPixelSprite(KeySpritePath) ?? Art2D.Key();
+        sr.sprite = LoadPixelSprite(KeySpritePath, ClearDungeonPixelsPerUnit) ?? Art2D.Key();
         sr.sortingOrder = 2;
         CircleCollider2D col = key.AddComponent<CircleCollider2D>();
         col.isTrigger = true;
@@ -530,10 +581,10 @@ public class GameBootstrap : MonoBehaviour
         exit.transform.SetParent(currentFloorRoot.transform);
         Vector2 safePos = ResolveFreeBoxPosition(position, new Vector2(0.9f, 1.2f));
         exit.transform.position = new Vector3(safePos.x, safePos.y, 0f);
-        exit.transform.localScale = new Vector3(0.9f, 1.2f, 1f);
+        exit.transform.localScale = new Vector3(1.15f, 1.45f, 1f);
         AddGlow(exit.transform, new Color(0.12f, 0.72f, 1f, 0.22f), new Vector3(2.4f, 2.2f, 1f), 0);
         SpriteRenderer sr = exit.AddComponent<SpriteRenderer>();
-        sr.sprite = LoadPixelSprite(ExitSpritePath) ?? Art2D.ExitGate();
+        sr.sprite = LoadPixelSprite(ExitSpritePath, ClearDungeonPixelsPerUnit) ?? Art2D.ExitGate();
         sr.sortingOrder = 1;
         BoxCollider2D col = exit.AddComponent<BoxCollider2D>();
         col.isTrigger = true;
@@ -677,6 +728,7 @@ public class GameBootstrap : MonoBehaviour
         guard.pointA = a;
         guard.pointB = b;
         guard.wallMask = 1 << WallLayer;
+        guard.defeatClip = LoadOggClip(EnemyDefeatAudioPath);
         ApplyEnemyScaling(guard, floor, config);
         AddEnemyAbilityIfNeeded(enemy, guard, config);
     }
@@ -694,7 +746,9 @@ public class GameBootstrap : MonoBehaviour
         ability.kind = config.kind;
         ability.player = playerTransform;
         ability.wallMask = 1 << WallLayer;
-        ability.projectileSprite = LoadPixelSprite(ProjectileSpritePath, 64f) ?? Art2D.Projectile(64, 24);
+        ability.projectileSprite = LoadPixelSprite(ProjectileSpritePath, 16f)
+            ?? LoadPixelSprite(PixelCuteProjectileSpritePath, 64f)
+            ?? Art2D.Projectile(64, 24);
         ability.slimeSprite = Art2D.EnemySprite(EnemyKind.SlimeScout);
         ability.spawnRoot = currentFloorRoot != null ? currentFloorRoot.transform : null;
     }
@@ -789,22 +843,22 @@ public class GameBootstrap : MonoBehaviour
         Canvas cv = MakeCanvas("HUDCanvas", 0);
         HUD hud = cv.gameObject.AddComponent<HUD>();
         hud.root = cv.gameObject;
-        MakeUiImage(cv.transform, "HudPanel", new Vector2(16, -16), new Vector2(0, 1), new Vector2(545, 350), new Color(0.85f, 0.9f, 1f, 0.92f), UiPanelSpritePath);
-        MakeUiImage(cv.transform, "HudAccent", new Vector2(16, -16), new Vector2(0, 1), new Vector2(5, 350), new Color(0.28f, 0.82f, 1f, 0.92f));
-        MakeUiImage(cv.transform, "TimerPanel", new Vector2(-16, -16), new Vector2(1, 1), new Vector2(245, 62), new Color(0.85f, 0.9f, 1f, 0.92f), UiPanelSpritePath);
-        MakeUiImage(cv.transform, "ObjectivePanel", new Vector2(0, 18), new Vector2(0.5f, 0), new Vector2(760, 52), new Color(0.85f, 0.9f, 1f, 0.86f), UiPanelSpritePath);
-        hud.floorText = MakeText(cv.transform, "Floor: 1", new Vector2(20, -20), new Vector2(0, 1), 30, TextAnchor.UpperLeft, new Color(0.72f, 0.95f, 1f));
-        hud.livesText = MakeText(cv.transform, "Lives: 3", new Vector2(20, -58), new Vector2(0, 1), 26, TextAnchor.UpperLeft, Color.white);
-        hud.keyText = MakeText(cv.transform, "Key: Missing", new Vector2(20, -94), new Vector2(0, 1), 24, TextAnchor.UpperLeft, new Color(1f, 0.9f, 0.45f));
-        hud.enemiesText = MakeText(cv.transform, "Defeated: 0", new Vector2(20, -128), new Vector2(0, 1), 22, TextAnchor.UpperLeft, new Color(1f, 0.72f, 0.62f));
-        hud.levelText = MakeText(cv.transform, "Level: 1", new Vector2(20, -162), new Vector2(0, 1), 24, TextAnchor.UpperLeft, new Color(0.72f, 0.95f, 1f));
-        hud.xpText = MakeText(cv.transform, "XP: 0 / 20", new Vector2(20, -196), new Vector2(0, 1), 20, TextAnchor.UpperLeft, new Color(0.82f, 0.9f, 1f));
-        hud.xpBarFill = MakeHudBar(cv.transform, new Vector2(20, -226), new Vector2(280, 14), new Color(0.05f, 0.08f, 0.11f, 0.82f), new Color(0.35f, 0.85f, 1f, 0.95f));
-        hud.weaponText = MakeText(cv.transform, "Weapon: Basic Shot", new Vector2(20, -256), new Vector2(0, 1), 19, TextAnchor.UpperLeft, new Color(1f, 0.86f, 0.42f));
-        hud.weaponText.GetComponent<RectTransform>().sizeDelta = new Vector2(520, 100);
-        hud.passiveText = MakeText(cv.transform, "Passives: None", new Vector2(20, -308), new Vector2(0, 1), 19, TextAnchor.UpperLeft, new Color(0.75f, 1f, 0.72f));
-        hud.passiveText.GetComponent<RectTransform>().sizeDelta = new Vector2(520, 100);
-        hud.timerText = MakeText(cv.transform, "Time: 0s", new Vector2(-20, -20), new Vector2(1, 1), 28, TextAnchor.UpperRight, Color.white);
+        MakeUiImage(cv.transform, "HudPanel", new Vector2(14, -14), new Vector2(0, 1), new Vector2(315, 214), new Color(0.04f, 0.05f, 0.08f, 0.74f), UiPanelSpritePath);
+        MakeUiImage(cv.transform, "HudAccent", new Vector2(14, -14), new Vector2(0, 1), new Vector2(4, 214), new Color(0.28f, 0.82f, 1f, 0.8f));
+        MakeUiImage(cv.transform, "TimerPanel", new Vector2(-14, -14), new Vector2(1, 1), new Vector2(205, 52), new Color(0.04f, 0.05f, 0.08f, 0.74f), UiPanelSpritePath);
+        MakeUiImage(cv.transform, "ObjectivePanel", new Vector2(0, 18), new Vector2(0.5f, 0), new Vector2(700, 48), new Color(0.04f, 0.05f, 0.08f, 0.68f), UiPanelSpritePath);
+        hud.floorText = MakeText(cv.transform, "Floor: 1", new Vector2(22, -20), new Vector2(0, 1), 24, TextAnchor.UpperLeft, new Color(0.72f, 0.95f, 1f));
+        hud.livesText = MakeText(cv.transform, "Lives: 3", new Vector2(22, -52), new Vector2(0, 1), 21, TextAnchor.UpperLeft, Color.white);
+        hud.keyText = MakeText(cv.transform, "Key: Missing", new Vector2(22, -82), new Vector2(0, 1), 20, TextAnchor.UpperLeft, new Color(1f, 0.9f, 0.45f));
+        hud.enemiesText = MakeText(cv.transform, "Defeated: 0", new Vector2(22, -112), new Vector2(0, 1), 19, TextAnchor.UpperLeft, new Color(1f, 0.72f, 0.62f));
+        hud.levelText = MakeText(cv.transform, "Level: 1", new Vector2(22, -140), new Vector2(0, 1), 20, TextAnchor.UpperLeft, new Color(0.72f, 0.95f, 1f));
+        hud.xpText = MakeText(cv.transform, "XP: 0 / 20", new Vector2(22, -168), new Vector2(0, 1), 18, TextAnchor.UpperLeft, new Color(0.82f, 0.9f, 1f));
+        hud.xpBarFill = MakeHudBar(cv.transform, new Vector2(22, -194), new Vector2(245, 12), new Color(0.05f, 0.08f, 0.11f, 0.82f), new Color(0.35f, 0.85f, 1f, 0.95f));
+        hud.weaponText = MakeText(cv.transform, "Weapon: Basic Shot", new Vector2(18, 72), new Vector2(0, 0), 18, TextAnchor.LowerLeft, new Color(1f, 0.86f, 0.42f));
+        hud.weaponText.GetComponent<RectTransform>().sizeDelta = new Vector2(560, 40);
+        hud.passiveText = MakeText(cv.transform, "Passives: None", new Vector2(18, 36), new Vector2(0, 0), 18, TextAnchor.LowerLeft, new Color(0.75f, 1f, 0.72f));
+        hud.passiveText.GetComponent<RectTransform>().sizeDelta = new Vector2(560, 40);
+        hud.timerText = MakeText(cv.transform, "Time: 0s", new Vector2(-18, -18), new Vector2(1, 1), 24, TextAnchor.UpperRight, Color.white);
         hud.objectiveText = MakeText(cv.transform, "", new Vector2(0, 30), new Vector2(0.5f, 0), 24, TextAnchor.LowerCenter, new Color(0.85f, 0.9f, 1f));
         MakeText(cv.transform, "ESC = pause", new Vector2(-20, 30), new Vector2(1, 0), 18, TextAnchor.LowerRight, new Color(1, 1, 1, 0.55f));
     }
@@ -852,13 +906,13 @@ public class GameBootstrap : MonoBehaviour
     {
         Canvas cv = MakeCanvas("MenuCanvas", 10);
         Menus menus = cv.gameObject.AddComponent<Menus>();
-        menus.clickClip = Art2D.Tone(550f, 0.07f);
+        menus.clickClip = LoadOggClip(MenuClickAudioPath) ?? Art2D.Tone(550f, 0.07f);
         menus.mainPage = BuildMainPage(cv.transform, menus);
         menus.instructionsPage = BuildInfoPage(cv.transform, "How to Play",
             "Move: WASD or arrow keys\nPause: ESC\n\nGoal: collect the gold key, then reach the blue exit door.\nAvoid red guards. They patrol and chase if you get too close.",
             menus.OnBackToMenu);
         menus.creditsPage = BuildInfoPage(cv.transform, "Credits",
-            "Code, audio, and the cute pixel visual set are generated for this module project.\nKenney CC0 sprites remain as documented fallback assets in README.",
+            "Code and integration are original module work.\nArt: project-generated readable player/floor/wall/key/door sprites, plus Kenney Tiny Dungeon, Kenney UI Pack, and Kenney Topdown Shooter fallback assets, all documented in CREDITS.md.\nSFX: Kenney Interface, RPG, and Impact Sounds, all CC0.\nMusic: \"8bit Dungeon Level\" Kevin MacLeod (incompetech.com), CC BY 4.0.\nFull source and license details are documented in CREDITS.md.",
             menus.OnBackToMenu);
         menus.pausePage = BuildPausePage(cv.transform, menus);
         menus.winPage = BuildEndPage(cv.transform, menus, "ESCAPED", new Color(0.45f, 1f, 0.65f), out menus.winText);
@@ -1007,5 +1061,95 @@ public class GameBootstrap : MonoBehaviour
         GameObject es = new GameObject("EventSystem");
         es.AddComponent<EventSystem>();
         es.AddComponent<StandaloneInputModule>();
+    }
+}
+
+public class RuntimeMusicController : MonoBehaviour
+{
+    public AudioSource source;
+    public float menuVolume = 0.16f;
+    public float playingVolume = 0.24f;
+    public float pausedVolume = 0.08f;
+
+    void Start()
+    {
+        if (GameManager.I != null) GameManager.I.OnStateChanged += SyncToPhase;
+        if (source != null && source.clip != null && !source.isPlaying) source.Play();
+        SyncToPhase();
+    }
+
+    void OnDestroy()
+    {
+        if (GameManager.I != null) GameManager.I.OnStateChanged -= SyncToPhase;
+    }
+
+    void SyncToPhase()
+    {
+        if (source == null || GameManager.I == null) return;
+
+        switch (GameManager.I.phase)
+        {
+            case GameManager.Phase.Playing:
+                source.volume = playingVolume;
+                if (!source.isPlaying) source.Play();
+                break;
+            case GameManager.Phase.Paused:
+            case GameManager.Phase.LevelUp:
+            case GameManager.Phase.PassiveUpgrade:
+                source.volume = pausedVolume;
+                break;
+            case GameManager.Phase.Menu:
+                source.volume = menuVolume;
+                if (!source.isPlaying) source.Play();
+                break;
+            default:
+                source.volume = menuVolume;
+                break;
+        }
+    }
+}
+
+public class RunEventAudio : MonoBehaviour
+{
+    public AudioClip floorClearedClip;
+    public AudioClip runEndedClip;
+
+    AudioSource source;
+
+    void Awake()
+    {
+        source = gameObject.AddComponent<AudioSource>();
+        source.playOnAwake = false;
+    }
+
+    void Start()
+    {
+        if (GameManager.I == null) return;
+
+        GameManager.I.OnFloorCleared += PlayFloorCleared;
+        GameManager.I.OnRunEnded += PlayRunEnded;
+    }
+
+    void OnDestroy()
+    {
+        if (GameManager.I == null) return;
+
+        GameManager.I.OnFloorCleared -= PlayFloorCleared;
+        GameManager.I.OnRunEnded -= PlayRunEnded;
+    }
+
+    void PlayFloorCleared()
+    {
+        Play(floorClearedClip, 0.7f);
+    }
+
+    void PlayRunEnded()
+    {
+        Play(runEndedClip, 0.55f);
+    }
+
+    void Play(AudioClip clip, float volume)
+    {
+        if (clip != null && source != null) source.PlayOneShot(clip, volume);
     }
 }
