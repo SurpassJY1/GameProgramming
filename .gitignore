@@ -21,3 +21,6 @@
 .vscode/
 .idea/
 .tmp_assets/
+
+# Generated documentation previews
+docs/rendered_design_doc/

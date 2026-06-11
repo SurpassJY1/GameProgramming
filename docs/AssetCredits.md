@@ -91,13 +91,61 @@ These generated visuals are original work for this project and do not come from 
 
 ## Audio
 
-All sound effects are generated at runtime in `Art2D.cs`:
+The project uses documented third-party audio from `Project2DImproved 2/Assets/StreamingAssets/thirdparty/`
+plus runtime-generated fallback sounds.
+
+### Third-party audio
+
+Kenney Interface Sounds:
+
+- Author: Kenney
+- Source: https://kenney.nl/assets/interface-sounds
+- License: Creative Commons Zero (CC0 1.0)
+- Local license copy: `Project2DImproved 2/Assets/StreamingAssets/thirdparty/kenney-audio/interface/License.txt`
+- Local files:
+  - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/kenney-audio/interface/Audio/click_002.ogg`
+  - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/kenney-audio/interface/Audio/confirmation_001.ogg`
+  - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/kenney-audio/interface/Audio/select_003.ogg`
+
+Kenney RPG Audio:
+
+- Author: Kenney
+- Source: https://kenney.nl/assets/rpg-audio
+- License: Creative Commons Zero (CC0 1.0)
+- Local license copy: `Project2DImproved 2/Assets/StreamingAssets/thirdparty/kenney-audio/rpg/License.txt`
+- Local files:
+  - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/kenney-audio/rpg/Audio/handleCoins.ogg`
+  - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/kenney-audio/rpg/Audio/knifeSlice.ogg`
+  - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/kenney-audio/rpg/Audio/doorOpen_1.ogg`
+
+Kenney Impact Sounds:
+
+- Author: Kenney
+- Source: https://kenney.nl/assets/impact-sounds
+- License: Creative Commons Zero (CC0 1.0)
+- Local license copy: `Project2DImproved 2/Assets/StreamingAssets/thirdparty/kenney-audio/impact/License.txt`
+- Local files:
+  - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/kenney-audio/impact/Audio/impactPunch_heavy_000.ogg`
+  - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/kenney-audio/impact/Audio/impactMetal_light_000.ogg`
+  - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/kenney-audio/impact/Audio/impactGeneric_light_000.ogg`
+
+Background music:
+
+- Track: `"8bit Dungeon Level"`
+- Author: Kevin MacLeod (`incompetech.com`)
+- Source: https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1200066
+- License: Creative Commons Attribution 4.0
+- Required attribution: `"8bit Dungeon Level" Kevin MacLeod (incompetech.com), Licensed under Creative Commons: By Attribution 4.0 License, http://creativecommons.org/licenses/by/4.0/`
+- Local file: `Project2DImproved 2/Assets/StreamingAssets/thirdparty/incompetech/8bit-dungeon-level.mp3`
+- Local attribution copy: `Project2DImproved 2/Assets/StreamingAssets/thirdparty/incompetech/ATTRIBUTION.txt`
+
+### Runtime-generated fallback sounds
+
+`Art2D.cs` can still generate simple sounds if external clips are missing:
 
 - `Tone`: button click style sounds
 - `Noise`: hit feedback
 - `Chime`: key and win feedback
-
-No external audio files, music, or sound libraries are used.
 
 ## Fonts
 
@@ -109,4 +157,4 @@ Unity `2022.3.62f1` and the packages listed in `Project2DImproved 2/Packages/man
 
 ## External Sources
 
-No third-party gameplay code, tutorials, starter kits, paid assets, or restricted-license assets are included. The only third-party visual assets currently included are the Kenney CC0 fallback sprites listed above. Planned itch.io assets were not included because the environment could not connect to the download source.
+No third-party gameplay code, tutorials, starter kits, paid assets, or restricted-license assets are included. Third-party assets are limited to the Kenney CC0 sprites/audio and the Incompetech CC BY 4.0 music listed above.
