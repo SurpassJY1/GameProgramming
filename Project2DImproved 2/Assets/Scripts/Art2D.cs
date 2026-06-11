@@ -1,7 +1,9 @@
 using System.IO;
 using UnityEngine;
+using UnityEngine.Networking;
 
-/// Procedural sprite and audio helpers so the project ships zero binary assets.
+/// Asset helpers. External licensed assets are loaded from StreamingAssets first; procedural
+/// sprites and synthesized clips remain as emergency fallbacks if files are missing.
 public static class Art2D
 {
     public static Sprite FromPngFile(string relativePath, float pixelsPerUnit = 100f, FilterMode filter = FilterMode.Point)
@@ -15,6 +17,25 @@ public static class Art2D
         tex.filterMode = filter;
         return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height),
             new Vector2(0.5f, 0.5f), pixelsPerUnit);
+    }
+
+    public static AudioClip FromAudioFile(string relativePath, AudioType audioType)
+    {
+        if (string.IsNullOrEmpty(relativePath)) return null;
+
+        string fullPath = Path.Combine(Application.streamingAssetsPath, relativePath);
+        if (!File.Exists(fullPath)) return null;
+
+        string url = "file://" + fullPath;
+        using (UnityWebRequest request = UnityWebRequestMultimedia.GetAudioClip(url, audioType))
+        {
+            UnityWebRequestAsyncOperation op = request.SendWebRequest();
+            float timeout = Time.realtimeSinceStartup + 12f;
+            while (!op.isDone && Time.realtimeSinceStartup < timeout) { }
+
+            if (!op.isDone || request.result != UnityWebRequest.Result.Success) return null;
+            return DownloadHandlerAudioClip.GetContent(request);
+        }
     }
 
     public static Sprite SolidCircle(Color color, int size = 64)
@@ -384,6 +405,36 @@ public static class Art2D
                     detail = Mathf.Abs(u - 0.5f) < 0.045f || Mathf.Abs(v - 0.5f) < 0.045f;
                     eyes = EyePair(u, v, 0.43f, 0.58f, 0.57f, 0.58f, 0.026f);
                     break;
+                // Student-reviewed fallback art: the real boss PNGs live in StreamingAssets and
+                // are documented in CREDITS.md. AI-assisted support helped generate these emergency
+                // procedural shapes; they are used only if the submitted boss PNG files are missing.
+                case EnemyKind.SlimeKing:
+                    main = Ellipse(u, v, 0.5f, 0.38f, 0.36f, 0.27f) || Ellipse(u, v, 0.5f, 0.58f, 0.3f, 0.18f);
+                    detail = TriangleUp(u, v, 0.5f, 0.78f, 0.2f, 0.16f) || Star(u, v, 0.5f, 0.74f, 0.09f);
+                    eyes = EyePair(u, v, 0.4f, 0.53f, 0.6f, 0.53f, 0.034f);
+                    break;
+                case EnemyKind.FrostQueen:
+                    main = Ellipse(u, v, 0.5f, 0.48f, 0.3f, 0.32f) ||
+                        TriangleUp(u, v, 0.36f, 0.78f, 0.16f, 0.2f) ||
+                        TriangleUp(u, v, 0.64f, 0.78f, 0.16f, 0.2f);
+                    detail = Capsule(u, v, 0.3f, 0.34f, 0.7f, 0.34f, 0.03f) || Capsule(u, v, 0.5f, 0.26f, 0.5f, 0.74f, 0.03f);
+                    eyes = EyePair(u, v, 0.4f, 0.54f, 0.6f, 0.54f, 0.03f);
+                    break;
+                case EnemyKind.ShadeOverlord:
+                    main = Ellipse(u, v, 0.5f, 0.48f, 0.33f, 0.34f) ||
+                        TriangleDown(u, v, 0.5f, 0.15f, 0.32f, 0.28f);
+                    detail = Capsule(u, v, 0.24f, 0.68f, 0.76f, 0.68f, 0.032f) || Star(u, v, 0.5f, 0.38f, 0.1f);
+                    eyes = EyePair(u, v, 0.39f, 0.56f, 0.61f, 0.56f, 0.034f);
+                    break;
+                case EnemyKind.CrystalTitan:
+                    main = Ellipse(u, v, 0.5f, 0.44f, 0.34f, 0.3f) ||
+                        TriangleUp(u, v, 0.28f, 0.75f, 0.18f, 0.24f) ||
+                        TriangleUp(u, v, 0.72f, 0.75f, 0.18f, 0.24f) ||
+                        TriangleDown(u, v, 0.5f, 0.18f, 0.3f, 0.24f);
+                    detail = Capsule(u, v, 0.26f, 0.35f, 0.74f, 0.35f, 0.035f) ||
+                        Star(u, v, 0.5f, 0.68f, 0.12f);
+                    eyes = EyePair(u, v, 0.4f, 0.52f, 0.6f, 0.52f, 0.034f);
+                    break;
             }
 
             if (main)
@@ -464,6 +515,29 @@ public static class Art2D
                 body = new Color(0.5f, 0.9f, 1f, 1f);
                 shade = new Color(0.12f, 0.28f, 0.48f, 1f);
                 accent = new Color(0.94f, 1f, 1f, 1f);
+                break;
+            case EnemyKind.SlimeKing:
+                body = new Color(0.6f, 1f, 0.42f, 1f);
+                shade = new Color(0.18f, 0.45f, 0.16f, 1f);
+                accent = new Color(1f, 0.86f, 0.24f, 1f);
+                break;
+            case EnemyKind.FrostQueen:
+                body = new Color(0.62f, 0.94f, 1f, 1f);
+                shade = new Color(0.16f, 0.32f, 0.68f, 1f);
+                accent = new Color(0.95f, 1f, 1f, 1f);
+                eye = new Color(0.05f, 0.22f, 0.4f, 1f);
+                break;
+            case EnemyKind.ShadeOverlord:
+                body = new Color(0.62f, 0.34f, 0.88f, 1f);
+                shade = new Color(0.12f, 0.04f, 0.22f, 1f);
+                accent = new Color(1f, 0.68f, 1f, 1f);
+                eye = new Color(1f, 0.72f, 1f, 1f);
+                break;
+            case EnemyKind.CrystalTitan:
+                body = new Color(0.9f, 0.28f, 0.82f, 1f);
+                shade = new Color(0.24f, 0.06f, 0.32f, 1f);
+                accent = new Color(1f, 0.82f, 0.28f, 1f);
+                eye = new Color(1f, 0.92f, 0.3f, 1f);
                 break;
             default:
                 body = new Color(0.56f, 1f, 0.48f, 1f);

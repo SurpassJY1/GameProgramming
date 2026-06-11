@@ -22,6 +22,7 @@ public class Bullet : MonoBehaviour
     public float slowDuration;
     public float explosionRadius;
     public int explosionDamage;
+    public AudioClip impactClip;
 
     float born;
     readonly List<Enemy> hitEnemies = new List<Enemy>();
@@ -97,6 +98,7 @@ public class Bullet : MonoBehaviour
 
     void HitAndDestroy(Vector3 position)
     {
+        PlayImpact(position);
         Explode(position);
         SpawnImpact(position);
         Destroy(gameObject);
@@ -109,6 +111,7 @@ public class Bullet : MonoBehaviour
         // Track hit enemies so piercing shots cannot damage the same target repeatedly.
         hitEnemies.Add(enemy);
         enemy.TakeDamage(damage, transform.position);
+        PlayImpact(hitPoint);
 
         if (burnDamage > 0 && burnDuration > 0f) enemy.ApplyBurn(burnDamage, burnDuration);
         if (slowDuration > 0f) enemy.ApplySlow(slowMultiplier, slowDuration);
@@ -124,6 +127,11 @@ public class Bullet : MonoBehaviour
         }
 
         Destroy(gameObject);
+    }
+
+    void PlayImpact(Vector3 position)
+    {
+        if (impactClip != null) AudioSource.PlayClipAtPoint(impactClip, position, 0.45f);
     }
 
     void Explode(Vector3 position)

@@ -11,16 +11,23 @@ public enum EnemyKind
     DashImp,
     HealerFairy,
     SummonerShade,
-    CrystalBrute
+    CrystalBrute,
+    SlimeKing,
+    FrostQueen,
+    ShadeOverlord,
+    CrystalTitan
 }
 
 /// Base enemy behaviour: patrol between two points, chase with line of sight, take damage,
 /// and apply shared status effects. EnemyAbilityController adds type-specific attacks.
 ///
 /// Authorship note:
-/// - Student-owned implementation: enemy movement, chase rules, health/XP behaviour, and final
-///   balance in the playable run.
-/// - AI-assisted support: review suggestions and explanatory comments for ability organization.
+/// - Student-completed code: enemy movement, chase rules, health/XP behaviour, and final
+///   balance in the playable run, including the decision to make bosses reappear later as weaker
+///   elite enemies for presentation pacing.
+/// - AI-assisted support: code review suggestions, organization guidance for boss ability variants,
+///   reuse of boss attacks in elite mode, and explanatory comments for how the ability system works.
+///   The student completed the gameplay decisions and reviewed the final submitted code.
 public class Enemy : MonoBehaviour
 {
     public EnemyKind kind = EnemyKind.SlimeScout;
@@ -38,6 +45,11 @@ public class Enemy : MonoBehaviour
     public int currentHealth;
     public int xpReward = 10;
     public LayerMask wallMask;
+    public AudioClip defeatClip;
+
+    // Set only for real floor boss encounters. Boss-kind elite enemies keep this false so they use
+    // reduced attack counts/timers and do not trigger boss UI or exit-lock behaviour.
+    public bool isBoss;
 
     Vector3 startPosition;
     Vector3 target;
@@ -197,6 +209,8 @@ public class Enemy : MonoBehaviour
         // Defeated enemies are deactivated rather than destroyed immediately. That avoids accidental
         // duplicate XP events and keeps the death path simple for this vertical slice.
         dead = true;
+        if (defeatClip != null) AudioSource.PlayClipAtPoint(defeatClip, transform.position, 0.55f);
+        if (isBoss && GameManager.I != null) GameManager.I.RegisterBossDefeated();
         if (GameManager.I != null) GameManager.I.RegisterEnemyDefeated(xpReward);
         gameObject.SetActive(false);
     }
@@ -299,7 +313,7 @@ public class Enemy : MonoBehaviour
 /// Keeping this separate from Enemy makes the simple patrol/chase behaviour easier to read.
 ///
 /// Authorship note:
-/// - Student-owned implementation: enemy type selection, ability goals, and final gameplay tuning.
+/// - Student-completed code: enemy type selection, ability goals, and final gameplay tuning.
 /// - AI-assisted support: organization review and comments that describe each behaviour pattern.
 public class EnemyAbilityController : MonoBehaviour
 {
@@ -312,6 +326,10 @@ public class EnemyAbilityController : MonoBehaviour
     public Transform spawnRoot;
 
     float abilityTimer;
+    float bossProjectileTimer;
+    float bossDashTimer;
+    float bossSummonTimer;
+    float bossPulseTimer;
     float dashWindup;
     float dashTimer;
     Vector2 dashDirection;
@@ -322,6 +340,10 @@ public class EnemyAbilityController : MonoBehaviour
     {
         owner = owner != null ? owner : GetComponent<Enemy>();
         abilityTimer = Random.Range(0.25f, 1.2f);
+        bossProjectileTimer = 0.85f;
+        bossDashTimer = 2.4f;
+        bossSummonTimer = 4.3f;
+        bossPulseTimer = 3.1f;
     }
 
     void Update()
@@ -352,6 +374,18 @@ public class EnemyAbilityController : MonoBehaviour
                 break;
             case EnemyKind.CrystalBrute:
                 UpdateCrystalBrute();
+                break;
+            case EnemyKind.SlimeKing:
+                UpdateSlimeKing();
+                break;
+            case EnemyKind.FrostQueen:
+                UpdateFrostQueen();
+                break;
+            case EnemyKind.ShadeOverlord:
+                UpdateShadeOverlord();
+                break;
+            case EnemyKind.CrystalTitan:
+                UpdateCrystalTitan();
                 break;
         }
     }
@@ -539,6 +573,165 @@ public class EnemyAbilityController : MonoBehaviour
         owner.ForceAlert(2.5f);
     }
 
+    void UpdateSlimeKing()
+    {
+        // Slime King is the summoner boss. In full boss mode it can spawn several slimes and uses
+        // a larger close-range slam; in elite mode it keeps the same identity but fewer summons and
+        // a slower pulse timer make it manageable as a normal-room threat.
+        bossSummonTimer -= Time.deltaTime;
+        bossPulseTimer -= Time.deltaTime;
+
+        if (bossSummonTimer <= 0f && summonsMade < (owner.isBoss ? 8 : 3) && owner.HasLineOfSightToPlayer(5.5f))
+        {
+            bossSummonTimer = owner.isBoss ? 4.8f : 6.4f;
+            int count = owner.isBoss ? 3 : 1;
+            for (int i = 0; i < count; i++)
+                if (TrySummonSlime()) summonsMade++;
+            owner.ForceAlert(3f);
+        }
+
+        if (bossPulseTimer <= 0f && owner.HealthFraction < 0.75f)
+        {
+            bossPulseTimer = owner.isBoss ? 2.8f : 4.2f;
+            float range = owner.isBoss ? 1.75f : 1.35f;
+            float distance = Vector2.Distance(transform.position, player.position);
+            if (distance <= range)
+            {
+                Player target = player.GetComponent<Player>();
+                if (target != null) target.TakeHit(transform.position);
+            }
+            SpawnPulse(new Color(0.5f, 1f, 0.36f, 0.3f), owner.isBoss ? 3.2f : 2.2f, 0.35f);
+            owner.ForceAlert(2.5f);
+        }
+    }
+
+    void UpdateFrostQueen()
+    {
+        // Frost Queen controls space with slowing projectiles. The real boss fires a wider volley,
+        // while the elite version keeps only the central projectile and a weaker reposition burst.
+        bossProjectileTimer -= Time.deltaTime;
+        bossDashTimer -= Time.deltaTime;
+
+        if (bossProjectileTimer <= 0f && owner.HasLineOfSightToPlayer(6.4f))
+        {
+            bossProjectileTimer = owner.isBoss ? 1.25f : 1.9f;
+            Vector2 aim = ((Vector2)player.position - (Vector2)transform.position).normalized;
+            SpawnEnemyProjectile(aim, 4.9f, 0, 2.5f, 0.42f, 1.9f, new Color(0.45f, 0.9f, 1f, 1f));
+            if (owner.isBoss)
+            {
+                SpawnEnemyProjectile(Rotate(aim, 22f), 4.6f, 0, 2.2f, 0.5f, 1.8f, new Color(0.72f, 0.96f, 1f, 1f));
+                SpawnEnemyProjectile(Rotate(aim, -22f), 4.6f, 0, 2.2f, 0.5f, 1.8f, new Color(0.72f, 0.96f, 1f, 1f));
+            }
+            owner.ForceAlert(2.8f);
+        }
+
+        if (bossDashTimer <= 0f && owner.HasLineOfSightToPlayer(5.2f))
+        {
+            bossDashTimer = owner.isBoss ? 3.6f : 5.4f;
+            Vector2 direction = ((Vector2)player.position - (Vector2)transform.position).normalized;
+            owner.TryMoveAbilityDelta((Vector3)(direction * (owner.isBoss ? 0.72f : 0.45f)));
+            SpawnPulse(new Color(0.42f, 0.88f, 1f, 0.25f), owner.isBoss ? 2.8f : 1.8f, 0.28f);
+            owner.ForceAlert(2.5f);
+        }
+    }
+
+    void UpdateShadeOverlord()
+    {
+        // Shade Overlord mixes projectile pressure with summons. Both modes keep the same two-part
+        // identity, but the non-boss elite version has lower summon count and longer cooldowns.
+        bossProjectileTimer -= Time.deltaTime;
+        bossSummonTimer -= Time.deltaTime;
+
+        if (bossProjectileTimer <= 0f && owner.HasLineOfSightToPlayer(6.0f))
+        {
+            bossProjectileTimer = owner.isBoss ? 1.55f : 2.3f;
+            Vector2 aim = ((Vector2)player.position - (Vector2)transform.position).normalized;
+            SpawnEnemyProjectile(aim, 5.4f, 1, 1.6f, 0.62f, 1.8f, new Color(0.72f, 0.42f, 1f, 1f));
+            SpawnEnemyProjectile(Rotate(aim, owner.isBoss ? 35f : 20f), 4.8f, 1, 0f, 1f, 1.7f, new Color(0.9f, 0.55f, 1f, 1f));
+            SpawnEnemyProjectile(Rotate(aim, owner.isBoss ? -35f : -20f), 4.8f, 1, 0f, 1f, 1.7f, new Color(0.9f, 0.55f, 1f, 1f));
+            owner.ForceAlert(3f);
+        }
+
+        if (bossSummonTimer <= 0f && summonsMade < (owner.isBoss ? 6 : 2) && owner.HasLineOfSightToPlayer(5.8f))
+        {
+            bossSummonTimer = owner.isBoss ? 5.2f : 7.4f;
+            int count = owner.isBoss ? 2 : 1;
+            for (int i = 0; i < count; i++)
+                if (TrySummonSlime()) summonsMade++;
+            owner.ForceAlert(3f);
+        }
+    }
+
+    void UpdateCrystalTitan()
+    {
+        // Crystal Titan is the heavy pressure boss: projectile shots, dash windup, and low-health
+        // shockwaves. owner.isBoss gates the extra side projectiles and stronger shockwave so the
+        // later elite version remains readable without feeling like a full boss fight.
+        bossProjectileTimer -= Time.deltaTime;
+        bossDashTimer -= Time.deltaTime;
+        bossPulseTimer -= Time.deltaTime;
+
+        if (dashTimer > 0f)
+        {
+            dashTimer -= Time.deltaTime;
+            owner.TryMoveAbilityDelta((Vector3)(dashDirection * ((owner.isBoss ? 6.6f : 5.0f) * Time.deltaTime)));
+            return;
+        }
+
+        if (dashWindup > 0f)
+        {
+            dashWindup -= Time.deltaTime;
+            if (dashWindup <= 0f)
+            {
+                dashTimer = 0.34f;
+                dashDirection = ((Vector2)player.position - (Vector2)transform.position).normalized;
+            }
+            return;
+        }
+
+        if (bossProjectileTimer <= 0f && owner.HasLineOfSightToPlayer(6.2f))
+        {
+            bossProjectileTimer = owner.HealthFraction < 0.45f ? 1.1f : (owner.isBoss ? 1.55f : 2.2f);
+            Vector2 aim = ((Vector2)player.position - (Vector2)transform.position).normalized;
+            SpawnEnemyProjectile(aim, 5.8f, 1, 0f, 1f, 1.6f, new Color(1f, 0.35f, 0.22f, 1f));
+            if (owner.isBoss)
+            {
+                SpawnEnemyProjectile(Rotate(aim, 18f), 5.2f, 1, 0f, 1f, 1.6f, new Color(1f, 0.62f, 0.24f, 1f));
+                SpawnEnemyProjectile(Rotate(aim, -18f), 5.2f, 1, 0f, 1f, 1.6f, new Color(1f, 0.62f, 0.24f, 1f));
+            }
+            owner.ForceAlert(2.8f);
+        }
+
+        if (bossDashTimer <= 0f && owner.HasLineOfSightToPlayer(5.4f))
+        {
+            bossDashTimer = owner.isBoss ? 4.2f : 5.6f;
+            dashWindup = owner.isBoss ? 0.55f : 0.68f;
+            SpawnPulse(new Color(1f, 0.24f, 0.18f, 0.24f), owner.isBoss ? 2.35f : 1.65f, 0.3f);
+            owner.ForceAlert(3f);
+        }
+
+        if (bossPulseTimer <= 0f && owner.HealthFraction < 0.65f)
+        {
+            bossPulseTimer = owner.HealthFraction < 0.3f ? 2.2f : (owner.isBoss ? 3.4f : 4.8f);
+            float distance = Vector2.Distance(transform.position, player.position);
+            if (distance <= (owner.isBoss ? 1.65f : 1.25f))
+            {
+                Player target = player.GetComponent<Player>();
+                if (target != null) target.TakeHit(transform.position);
+            }
+            SpawnPulse(new Color(0.9f, 0.25f, 1f, 0.28f), owner.isBoss ? 3.1f : 2.1f, 0.35f);
+            owner.ForceAlert(2.5f);
+        }
+    }
+
+    Vector2 Rotate(Vector2 vector, float degrees)
+    {
+        float radians = degrees * Mathf.Deg2Rad;
+        float sin = Mathf.Sin(radians);
+        float cos = Mathf.Cos(radians);
+        return new Vector2(vector.x * cos - vector.y * sin, vector.x * sin + vector.y * cos).normalized;
+    }
+
     void SpawnPulse(Color color, float scale, float life)
     {
         GameObject pulse = new GameObject(kind + " Pulse");
@@ -560,7 +753,7 @@ public class EnemyAbilityController : MonoBehaviour
 /// support Spark Spitter and Frost Wisp behaviour.
 ///
 /// Authorship note:
-/// - Student-owned implementation: final projectile behaviour and interaction with Player.
+/// - Student-completed code: final projectile behaviour and interaction with Player.
 /// - AI-assisted support: comment wording and readability review.
 public class EnemyProjectile : MonoBehaviour
 {

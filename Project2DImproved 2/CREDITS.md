@@ -37,12 +37,17 @@ for this module after testing showed the third-party tiles were not visually cle
   - `Assets/StreamingAssets/generated/clear-dungeon/wall_tile.png`
   - `Assets/StreamingAssets/generated/clear-dungeon/key.png`
   - `Assets/StreamingAssets/generated/clear-dungeon/exit_door.png`
+  - `Assets/StreamingAssets/generated/clear-dungeon/bosses/slime_king.png`
+  - `Assets/StreamingAssets/generated/clear-dungeon/bosses/frost_queen.png`
+  - `Assets/StreamingAssets/generated/clear-dungeon/bosses/shade_overlord.png`
+  - `Assets/StreamingAssets/generated/clear-dungeon/bosses/crystal_titan.png`
 - Purpose:
   - `wall_tile.png` is the normal wall sprite.
   - `floor_tile.png` is the normal floor/background tile.
   - `key.png` is the normal collectible key sprite.
   - `exit_door.png` is the normal exit door sprite.
   - `player.png` is the normal player sprite.
+  - `bosses/*.png` are the normal boss and later elite enemy sprites.
 
 Kenney Tiny Dungeon:
 
