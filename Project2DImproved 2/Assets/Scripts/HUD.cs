@@ -1,7 +1,13 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-/// In-play HUD for lives, key state, timer and current objective.
+/// In-play HUD for lives, key state, timer, current objective, and boss health.
+///
+/// Authorship note:
+/// - Student-completed code: required HUD information and the design requirement that a boss
+///   health bar appears at the bottom of the screen during boss encounters.
+/// - AI-assisted support: code review suggestions, wiring guidance for GameManager.activeBoss, and
+///   comments that clarify when the boss bar appears. Final UI behaviour was reviewed by the student.
 public class HUD : MonoBehaviour
 {
     public Text floorText;
@@ -15,6 +21,9 @@ public class HUD : MonoBehaviour
     public Text passiveText;
     public Text timerText;
     public Text objectiveText;
+    public GameObject bossBarRoot;
+    public Image bossBarFill;
+    public Text bossBarText;
     public GameObject root;
 
     void Start()
@@ -50,5 +59,29 @@ public class HUD : MonoBehaviour
         if (passiveText != null) passiveText.text = "Passives: " + gm.GetPassiveBuildSummary();
         if (timerText != null) timerText.text = "Time: " + Mathf.FloorToInt(gm.elapsed) + "s";
         if (objectiveText != null) objectiveText.text = gm.objective;
+        RepaintBossBar(gm);
+    }
+
+    void RepaintBossBar(GameManager gm)
+    {
+        // The boss bar is driven by gameplay state, not by floor number. This means it appears only
+        // while a formal boss encounter is alive. Past bosses that return as weaker elite enemies
+        // keep boss-style sprites/abilities, but they do not set bossAliveThisFloor and therefore
+        // do not take over the HUD.
+        bool showBossBar = gm.bossAliveThisFloor && gm.activeBoss != null && !gm.activeBoss.IsDead;
+        if (bossBarRoot != null) bossBarRoot.SetActive(showBossBar);
+
+        // The bottom-left weapon/passive summaries share screen space with the boss bar. Hiding
+        // them during boss fights keeps the important health bar legible for the short demo.
+        if (weaponText != null) weaponText.gameObject.SetActive(!showBossBar);
+        if (passiveText != null) passiveText.gameObject.SetActive(!showBossBar);
+        if (!showBossBar) return;
+
+        if (bossBarFill != null) bossBarFill.fillAmount = gm.activeBoss.HealthFraction;
+        if (bossBarText != null)
+        {
+            bossBarText.text = gm.activeBoss.displayName + "  " +
+                gm.activeBoss.currentHealth + " / " + gm.activeBoss.maxHealth;
+        }
     }
 }

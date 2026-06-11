@@ -6,14 +6,17 @@ using UnityEngine;
 /// upgrade application, and HUD/menu notifications.
 ///
 /// Authorship note:
-/// - Student-owned implementation: final game flow, run state, floor progression, XP values,
-///   upgrade rules, and integration with player/UI scripts.
-/// - AI-assisted support: review suggestions and comment/documentation wording. The final logic
-///   remains student-reviewed and accepted for the submitted project.
+/// - Student-completed code: final game flow, run state, floor progression, XP values,
+///   upgrade rules, boss-floor requirement that the exit stays sealed until the boss is defeated,
+///   and integration with player/UI scripts.
+/// - AI-assisted support: code review suggestions, boss state-tracking guidance, HUD health-bar data
+///   exposure guidance, and comment/documentation wording. The student completed the final logic
+///   review and accepted it for the submitted project.
 public class GameManager : MonoBehaviour
 {
     public static GameManager I { get; private set; }
     const string TutorialSuccessfulRunsKey = "DungeonKeyRun_TutorialSuccessfulRuns";
+    const int BossFloorInterval = 3;
 
     public enum Phase { Menu, Playing, Paused, LevelUp, PassiveUpgrade, Won, GameOver }
     public Phase phase = Phase.Menu;
@@ -47,6 +50,12 @@ public class GameManager : MonoBehaviour
     public int moveSpeedUpLevel;
     public int fireCooldownBonusLevel;
     public int xpBonusLevel;
+
+    // Boss state is intentionally kept in GameManager instead of HUD. The gameplay rule is that a
+    // formal boss encounter seals the exit, while the HUD only visualizes the same state. Elite
+    // versions of past bosses never register here, so they behave like normal enemies.
+    public bool bossAliveThisFloor;
+    public Enemy activeBoss;
 
     int baseStartLives;
     bool countedTutorialSuccessThisRun;
@@ -120,6 +129,16 @@ public class GameManager : MonoBehaviour
             return;
         }
 
+        if (bossAliveThisFloor)
+        {
+            // Student-completed rule: key collection is not enough on boss floors; the boss must
+            // also be defeated. AI-assisted support helped wire this flag to Enemy/GameBootstrap
+            // when a formal boss encounter starts or ends.
+            objective = "Floor " + currentFloor + ": The exit is sealed. Defeat the boss first.";
+            OnStateChanged?.Invoke();
+            return;
+        }
+
         // Clearing a floor pauses the action and lets the player choose a passive upgrade before
         // the next floor is generated.
         BeginPassiveUpgrade();
@@ -150,6 +169,30 @@ public class GameManager : MonoBehaviour
 
         enemiesDefeated++;
         AddXP(Mathf.RoundToInt(xpReward * XPBonusMultiplier()));
+    }
+
+    public void RegisterBossSpawned(Enemy boss)
+    {
+        // Called only for true boss encounters, not for later elite versions of the same boss types.
+        // This keeps the bottom boss HP bar and exit lock tied to boss floors only.
+        bossAliveThisFloor = true;
+        activeBoss = boss;
+        objective = "Floor " + currentFloor + ": Boss encounter. Get the key and defeat the boss.";
+        OnStateChanged?.Invoke();
+    }
+
+    public void RegisterBossDefeated()
+    {
+        if (!bossAliveThisFloor) return;
+
+        // Clearing activeBoss hides the HUD boss bar on the next repaint. The normal enemy defeat
+        // path still awards XP separately, so boss defeat stays compatible with level-up rewards.
+        bossAliveThisFloor = false;
+        activeBoss = null;
+        objective = hasKey
+            ? "Floor " + currentFloor + ": Boss defeated. Enter the exit."
+            : "Floor " + currentFloor + ": Boss defeated. Collect the key.";
+        OnStateChanged?.Invoke();
     }
 
     public void AddXP(int amount)
@@ -295,6 +338,8 @@ public class GameManager : MonoBehaviour
         moveSpeedUpLevel = 0;
         fireCooldownBonusLevel = 0;
         xpBonusLevel = 0;
+        bossAliveThisFloor = false;
+        activeBoss = null;
         playerCombat = null;
         player = null;
     }
@@ -332,6 +377,8 @@ public class GameManager : MonoBehaviour
         // A new floor keeps run upgrades and lives, but resets the floor key objective.
         currentFloor++;
         hasKey = false;
+        bossAliveThisFloor = false;
+        activeBoss = null;
         objective = FloorObjective();
         phase = Phase.Playing;
         Time.timeScale = 1f;
@@ -342,6 +389,7 @@ public class GameManager : MonoBehaviour
     string FloorObjective()
     {
         if (currentFloor <= 1) return "Floor 1: Find the key, then enter the exit.";
+        if (currentFloor % BossFloorInterval == 0) return "Floor " + currentFloor + ": Boss floor. Find the key and defeat the boss.";
         return "Floor " + currentFloor + ": Find the key, survive, and keep going.";
     }
 

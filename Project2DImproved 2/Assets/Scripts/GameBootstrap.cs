@@ -6,14 +6,17 @@ using UnityEngine.EventSystems;
 /// manually configured prefabs. This script owns layout, spawned actors, UI, and sprite fallback.
 ///
 /// Authorship note:
-/// - Student-owned implementation: runtime scene construction, floor layout rules, enemy setup,
-///   asset fallback choices, and final integration into the Unity project.
-/// - AI-assisted support: review suggestions and comment/documentation wording used to make the
-///   system easier to explain for assessment. The final code was reviewed as part of the submission.
+/// - Student-completed code: runtime scene construction, floor layout rules, enemy setup,
+///   asset fallback choices, final integration into the Unity project, and acceptance of the boss
+///   progression/design rules used in the playable build.
+/// - AI-assisted support: code review suggestions, implementation guidance for asset loading and
+///   boss/elite enemy plumbing, generated boss sprite support, and comment/documentation wording.
+///   The student completed the integration decisions and reviewed the final submitted code.
 public class GameBootstrap : MonoBehaviour
 {
     const int WallLayer = 8;
     const string ClearDungeonBasePath = "generated/clear-dungeon/";
+    const string BossSpriteBasePath = ClearDungeonBasePath + "bosses/";
     const string PixelCuteBasePath = "generated/pixel-cute-dungeon/selected/";
     const string PixelCuteProjectileSpritePath = PixelCuteBasePath + "projectile.png";
     const string TinyDungeonBasePath = "thirdparty/kenney-tiny-dungeon/tiles/";
@@ -45,8 +48,10 @@ public class GameBootstrap : MonoBehaviour
     const float KenneyTilePixelsPerUnit = 64f;
     const int BaseEnemyCount = 3;
     const int MaxEnemyCount = 14;
+    const int BossFloorInterval = 3;
     const int BaseEnemyHealth = 2;
     const int MaxEnemyHealth = 20;
+    const int MaxBossHealth = 90;
     const int BaseEnemyXP = 9;
     const int MaxEnemyXP = 55;
     const float BasePatrolSpeed = 1.85f;
@@ -140,6 +145,9 @@ public class GameBootstrap : MonoBehaviour
         }
     }
 
+    // Student-completed design data: the unlock floors, relative difficulty, and enemy names are
+    // part of the submitted game design. AI-assisted support helped organize this table so the
+    // runtime spawner, boss encounters, and later elite variants can use one source of truth.
     static readonly EnemyConfig[] EnemyConfigs =
     {
         new EnemyConfig(EnemyKind.SlimeScout, "Slime Scout", 1, 0.85f, 0.85f, 0.86f, 2.8f, 0.85f, TinyDungeonBasePath + "tile_0084.png", 0.82f),
@@ -151,7 +159,18 @@ public class GameBootstrap : MonoBehaviour
         new EnemyConfig(EnemyKind.DashImp, "Dash Imp", 7, 1.2f, 1.02f, 1.12f, 4.2f, 1.55f, TinyDungeonBasePath + "tile_0086.png", 0.86f, hasDashAttack: true),
         new EnemyConfig(EnemyKind.HealerFairy, "Healer Fairy", 8, 0.9f, 0.92f, 0.88f, 3.5f, 1.65f, TinyDungeonBasePath + "tile_0087.png", 0.78f, healsAllies: true),
         new EnemyConfig(EnemyKind.SummonerShade, "Summoner Shade", 9, 1.35f, 0.72f, 0.8f, 4.4f, 1.9f, TinyDungeonBasePath + "tile_0108.png", 0.92f, summonsAllies: true),
-        new EnemyConfig(EnemyKind.CrystalBrute, "Crystal Brute", 10, 2.8f, 0.72f, 1.08f, 4.0f, 2.6f, TinyDungeonBasePath + "tile_0110.png", 1.12f, elite: true)
+        new EnemyConfig(EnemyKind.CrystalBrute, "Crystal Brute", 10, 2.8f, 0.72f, 1.08f, 4.0f, 2.6f, TinyDungeonBasePath + "tile_0110.png", 1.12f, elite: true),
+
+        // Boss configs serve two roles:
+        // 1. On boss floors, BuildEnemy receives bossEncounter=true, so these become large,
+        //    high-health bosses with a health bar and exit lock.
+        // 2. On later floors, the same configs spawn as smaller elite enemies with reduced
+        //    strength. The unlock floors below are intentionally one floor after each boss debut
+        //    so a short classroom/demo run can show the "previous boss returns as elite" feature.
+        new EnemyConfig(EnemyKind.SlimeKing, "Slime King", 4, 2.15f, 0.7f, 0.85f, 5.6f, 2.35f, BossSpriteBasePath + "slime_king.png", 0.86f, summonsAllies: true, elite: true),
+        new EnemyConfig(EnemyKind.FrostQueen, "Frost Queen", 7, 2.25f, 0.72f, 0.9f, 6.0f, 2.55f, BossSpriteBasePath + "frost_queen.png", 0.86f, hasRangedAttack: true, hasDashAttack: true, elite: true),
+        new EnemyConfig(EnemyKind.ShadeOverlord, "Shade Overlord", 10, 2.45f, 0.68f, 0.86f, 6.1f, 2.75f, BossSpriteBasePath + "shade_overlord.png", 0.88f, hasRangedAttack: true, summonsAllies: true, elite: true),
+        new EnemyConfig(EnemyKind.CrystalTitan, "Crystal Titan", 13, 2.75f, 0.6f, 0.8f, 6.4f, 3.0f, BossSpriteBasePath + "crystal_titan.png", 0.9f, hasRangedAttack: true, hasDashAttack: true, elite: true)
     };
 
     // Four room variants rotate by floor number. The run can continue indefinitely while still
@@ -318,13 +337,22 @@ public class GameBootstrap : MonoBehaviour
         BuildExit(room.exitPosition);
 
         // Later floors add enemies and unlock stronger enemy types, but the same key-to-exit
-        // objective remains so the core rule is easy to understand.
+        // objective remains so the core rule is easy to understand. Every third floor adds a boss
+        // spike with fewer supporting enemies.
+        bool bossFloor = IsBossFloor(floor);
         int enemyCount = EnemyCountForFloor(floor);
         for (int i = 0; i < enemyCount; i++)
         {
             EnemyPatrolSpec patrol = PatrolForEnemy(room, i);
             EnemyKind kind = ChooseEnemyKindForFloor(floor, i);
             BuildEnemy(kind + "_" + floor + "_" + i, kind, playerTransform, patrol.pointA, patrol.pointB, floor);
+        }
+
+        if (bossFloor)
+        {
+            EnemyPatrolSpec patrol = BossPatrolForRoom();
+            EnemyKind bossKind = BossKindForFloor(floor);
+            BuildEnemy(bossKind + "_Boss_" + floor, bossKind, playerTransform, patrol.pointA, patrol.pointB, floor, true);
         }
     }
 
@@ -596,7 +624,13 @@ public class GameBootstrap : MonoBehaviour
     {
         int floorIndex = Mathf.Max(0, floor - 1);
         int addedEnemies = Mathf.CeilToInt(floorIndex * 0.75f);
-        return Mathf.Clamp(BaseEnemyCount + addedEnemies, BaseEnemyCount, MaxEnemyCount);
+        int count = Mathf.Clamp(BaseEnemyCount + addedEnemies, BaseEnemyCount, MaxEnemyCount);
+        return IsBossFloor(floor) ? Mathf.Max(2, count - 2) : count;
+    }
+
+    bool IsBossFloor(int floor)
+    {
+        return floor > 0 && floor % BossFloorInterval == 0;
     }
 
     EnemyPatrolSpec PatrolForEnemy(RoomVariant room, int enemyIndex)
@@ -612,6 +646,41 @@ public class GameBootstrap : MonoBehaviour
         return new EnemyPatrolSpec(basePatrol.pointA + offset, basePatrol.pointB - offset);
     }
 
+    EnemyPatrolSpec BossPatrolForRoom()
+    {
+        Vector2 center = ResolveAwayFromPlayer(ResolveFreeCirclePosition(Vector2.zero, 0.9f), 2.4f);
+        Vector2 left = ResolveFreeCirclePosition(center + new Vector2(-1.2f, 0.55f), 0.9f);
+        Vector2 right = ResolveFreeCirclePosition(center + new Vector2(1.2f, -0.55f), 0.9f);
+        return new EnemyPatrolSpec(new Vector3(left.x, left.y, 0f), new Vector3(right.x, right.y, 0f));
+    }
+
+    EnemyKind BossKindForFloor(int floor)
+    {
+        // Student-completed rule: every third floor is a milestone boss fight. AI-assisted support
+        // helped express the rule as a compact modulo rotation. Floor 3 starts with Slime King,
+        // then each later boss floor advances one slot: 6 Frost Queen, 9 Shade Overlord,
+        // 12 Crystal Titan, then loops.
+        int bossIndex = Mathf.Max(0, floor / BossFloorInterval - 1) % 4;
+        switch (bossIndex)
+        {
+            case 0: return EnemyKind.SlimeKing;
+            case 1: return EnemyKind.FrostQueen;
+            case 2: return EnemyKind.ShadeOverlord;
+            default: return EnemyKind.CrystalTitan;
+        }
+    }
+
+    bool IsBossKind(EnemyKind kind)
+    {
+        // These kinds can appear in two modes. bossEncounter=true means real boss fight; false
+        // means reduced elite enemy. Keeping the predicate explicit avoids accidentally treating
+        // normal elite enemies, such as Crystal Brute, as boss-health-bar encounters.
+        return kind == EnemyKind.SlimeKing ||
+            kind == EnemyKind.FrostQueen ||
+            kind == EnemyKind.ShadeOverlord ||
+            kind == EnemyKind.CrystalTitan;
+    }
+
     EnemyKind ChooseEnemyKindForFloor(int floor, int enemyIndex)
     {
         if (floor <= 1) return EnemyKind.SlimeScout;
@@ -620,8 +689,15 @@ public class GameBootstrap : MonoBehaviour
         // This makes progression visible during testing and presentation.
         if (enemyIndex == 0)
         {
+            // Presentation/demo rule requested by the student: the first floor after a boss fight
+            // should visibly show that boss returning as a weaker elite enemy. This guarantee is
+            // deterministic so it does not depend on random weighted selection during a live demo.
+            EnemyKind featuredEliteBoss;
+            if (TryFeaturedEliteBossForFloor(floor, out featuredEliteBoss)) return featuredEliteBoss;
+
             for (int i = 0; i < EnemyConfigs.Length; i++)
-                if (EnemyConfigs[i].unlockFloor == floor) return EnemyConfigs[i].kind;
+                if (!IsBossKind(EnemyConfigs[i].kind) && EnemyConfigs[i].unlockFloor == floor)
+                    return EnemyConfigs[i].kind;
         }
 
         // After the guaranteed slot, use deterministic weighted selection from unlocked enemies.
@@ -657,6 +733,15 @@ public class GameBootstrap : MonoBehaviour
 
         switch (config.kind)
         {
+            case EnemyKind.SlimeKing:
+            case EnemyKind.FrostQueen:
+            case EnemyKind.ShadeOverlord:
+            case EnemyKind.CrystalTitan:
+                // Boss types enter the ordinary enemy pool only after their showcase boss fight.
+                // The low weight makes them special, while the guaranteed floor rule above ensures
+                // each one appears soon enough for assessment without requiring a long run.
+                weight = floor >= config.unlockFloor ? 2 + Mathf.Min(2, (floor - config.unlockFloor) / 4) : 0;
+                break;
             case EnemyKind.SlimeScout:
                 weight = floor <= 3 ? 10 : Mathf.Max(3, 8 - floor / 2);
                 break;
@@ -683,6 +768,33 @@ public class GameBootstrap : MonoBehaviour
         return Mathf.Max(0, weight);
     }
 
+    bool TryFeaturedEliteBossForFloor(int floor, out EnemyKind kind)
+    {
+        // Student-completed pacing requirement: short presentation time means the "boss becomes
+        // elite" mechanic must appear quickly. These floors are exactly one floor after each boss debut:
+        // floor 4 after Slime King, 7 after Frost Queen, 10 after Shade Overlord, and 13 after
+        // Crystal Titan. AI-assisted support helped isolate the demo guarantee from the normal
+        // weighted spawn logic so the rest of the enemy pool remains data-driven.
+        kind = EnemyKind.SlimeScout;
+        switch (floor)
+        {
+            case 4:
+                kind = EnemyKind.SlimeKing;
+                return true;
+            case 7:
+                kind = EnemyKind.FrostQueen;
+                return true;
+            case 10:
+                kind = EnemyKind.ShadeOverlord;
+                return true;
+            case 13:
+                kind = EnemyKind.CrystalTitan;
+                return true;
+            default:
+                return false;
+        }
+    }
+
     EnemyConfig GetEnemyConfig(EnemyKind kind)
     {
         for (int i = 0; i < EnemyConfigs.Length; i++)
@@ -691,33 +803,47 @@ public class GameBootstrap : MonoBehaviour
         return EnemyConfigs[0];
     }
 
-    void BuildEnemy(string name, EnemyKind kind, Transform player, Vector3 a, Vector3 b, int floor)
+    void BuildEnemy(string name, EnemyKind kind, Transform player, Vector3 a, Vector3 b, int floor, bool bossEncounter = false)
     {
         // Enemy construction is split into data-driven setup and component setup:
         // EnemyConfig decides what this enemy is, ApplyEnemyScaling decides how hard it is on this
         // floor, and EnemyAbilityController is only added when the type needs a special behaviour.
         EnemyConfig config = GetEnemyConfig(kind);
-        Vector2 safeA = ResolveFreeCirclePosition(new Vector2(a.x, a.y), 0.38f);
-        Vector2 safeB = ResolveFreeCirclePosition(new Vector2(b.x, b.y), 0.38f);
-        safeA = ResolveAwayFromPlayer(safeA, 1.35f);
-        safeB = ResolveAwayFromPlayer(safeB, 1.35f);
+
+        // Boss enemy kinds are reused after their boss floor. The bossEncounter flag is what decides
+        // whether this object is the real floor boss or a later elite enemy:
+        // - true: larger model, higher stats, boss health bar, and sealed exit until defeated.
+        // - false: same distinctive boss sprite/abilities, but smaller and tuned as a strong minion.
+        bool bossKind = IsBossKind(config.kind);
+        bool boss = bossEncounter && bossKind;
+        float safeRadius = boss ? 0.78f : 0.38f;
+        float playerClearance = boss ? 2.4f : 1.35f;
+        Vector2 safeA = ResolveFreeCirclePosition(new Vector2(a.x, a.y), safeRadius);
+        Vector2 safeB = ResolveFreeCirclePosition(new Vector2(b.x, b.y), safeRadius);
+        safeA = ResolveAwayFromPlayer(safeA, playerClearance);
+        safeB = ResolveAwayFromPlayer(safeB, playerClearance);
         a = new Vector3(safeA.x, safeA.y, 0f);
         b = new Vector3(safeB.x, safeB.y, 0f);
 
         GameObject enemy = new GameObject(name);
         enemy.transform.SetParent(currentFloorRoot.transform);
         enemy.transform.position = a;
-        enemy.transform.localScale = Vector3.one * config.scale;
-        AddShadow(enemy.transform, new Vector2(0f, -0.34f), new Vector3(0.95f, 0.34f, 1f), -0.02f);
+        // Formal boss encounters get an extra model scale multiplier. Elite versions keep the
+        // smaller config.scale so they read as special enemies without occupying boss screen space.
+        enemy.transform.localScale = Vector3.one * (boss ? config.scale * 1.6f : config.scale);
+        AddShadow(enemy.transform, new Vector2(0f, boss ? -0.42f : -0.34f), boss ? new Vector3(1.45f, 0.46f, 1f) : new Vector3(0.95f, 0.34f, 1f), -0.02f);
+        if (bossKind) AddGlow(enemy.transform, BossGlowColor(kind), boss ? new Vector3(1.55f, 1.55f, 1f) : new Vector3(1.12f, 1.12f, 1f), 1);
         SpriteRenderer sr = enemy.AddComponent<SpriteRenderer>();
-        sr.sprite = LoadPixelSprite(config.spritePath, PixelActorPixelsPerUnit)
+        float spritePixelsPerUnit = bossKind ? ClearDungeonPixelsPerUnit : PixelActorPixelsPerUnit;
+        sr.sprite = LoadPixelSprite(config.spritePath, spritePixelsPerUnit)
             ?? Art2D.EnemySprite(kind)
             ?? LoadWorldSprite(EnemySpritePath, PixelActorPixelsPerUnit, KenneyEnemySpritePath, 100f)
             ?? Art2D.Diamond(new Color(0.92f, 0.25f, 0.25f));
         sr.sortingOrder = 2;
+        if (bossKind) sr.color = BossTint(kind);
         CircleCollider2D col = enemy.AddComponent<CircleCollider2D>();
         col.isTrigger = true;
-        col.radius = 0.5f;
+        col.radius = boss ? 0.68f : (bossKind ? 0.58f : 0.5f);
         Rigidbody2D rb = enemy.AddComponent<Rigidbody2D>();
         rb.bodyType = RigidbodyType2D.Kinematic;
         rb.gravityScale = 0f;
@@ -729,8 +855,37 @@ public class GameBootstrap : MonoBehaviour
         guard.pointB = b;
         guard.wallMask = 1 << WallLayer;
         guard.defeatClip = LoadOggClip(EnemyDefeatAudioPath);
-        ApplyEnemyScaling(guard, floor, config);
+        guard.isBoss = boss;
+        ApplyEnemyScaling(guard, floor, config, boss);
         AddEnemyAbilityIfNeeded(enemy, guard, config);
+
+        // Only true boss encounters register with GameManager. Elite boss-kind enemies are normal
+        // kills: they do not show the bottom boss HP bar and do not lock the exit.
+        if (boss && GameManager.I != null) GameManager.I.RegisterBossSpawned(guard);
+    }
+
+    Color BossTint(EnemyKind kind)
+    {
+        switch (kind)
+        {
+            case EnemyKind.SlimeKing: return new Color(0.66f, 1f, 0.48f, 1f);
+            case EnemyKind.FrostQueen: return new Color(0.68f, 0.96f, 1f, 1f);
+            case EnemyKind.ShadeOverlord: return new Color(0.92f, 0.58f, 1f, 1f);
+            case EnemyKind.CrystalTitan: return new Color(1f, 0.58f, 0.94f, 1f);
+            default: return Color.white;
+        }
+    }
+
+    Color BossGlowColor(EnemyKind kind)
+    {
+        switch (kind)
+        {
+            case EnemyKind.SlimeKing: return new Color(0.38f, 1f, 0.28f, 0.16f);
+            case EnemyKind.FrostQueen: return new Color(0.28f, 0.86f, 1f, 0.18f);
+            case EnemyKind.ShadeOverlord: return new Color(0.82f, 0.22f, 1f, 0.18f);
+            case EnemyKind.CrystalTitan: return new Color(1f, 0.28f, 0.52f, 0.18f);
+            default: return new Color(1f, 1f, 1f, 0.12f);
+        }
     }
 
     void AddEnemyAbilityIfNeeded(GameObject enemy, Enemy guard, EnemyConfig config)
@@ -775,17 +930,26 @@ public class GameBootstrap : MonoBehaviour
         sr.sortingOrder = sortingOrder;
     }
 
-    void ApplyEnemyScaling(Enemy enemy, int floor, EnemyConfig config)
+    void ApplyEnemyScaling(Enemy enemy, int floor, EnemyConfig config, bool bossEncounter)
     {
         int floorIndex = Mathf.Max(0, floor - 1);
         // Scaling is intentionally capped to keep endless-floor runs playable in a classroom demo.
         int healthGrowth = Mathf.FloorToInt(floorIndex * 1.15f) + Mathf.FloorToInt(floorIndex / 3f);
-        enemy.maxHealth = Mathf.Min(MaxEnemyHealth, Mathf.Max(1, Mathf.RoundToInt((BaseEnemyHealth + healthGrowth) * config.healthMultiplier)));
+        int healthCap = bossEncounter ? MaxBossHealth : MaxEnemyHealth;
+
+        // The same boss config can appear in two strengths. Formal bosses multiply the base config
+        // again, while later elite versions use only the lower config multipliers from EnemyConfigs.
+        // This directly supports the requested pacing: floor 4 can show the floor 3 boss as an elite
+        // without making it as punishing as the real floor 3 boss fight.
+        float healthMultiplier = bossEncounter ? config.healthMultiplier * 2.55f : config.healthMultiplier;
+        enemy.maxHealth = Mathf.Min(healthCap, Mathf.Max(1, Mathf.RoundToInt((BaseEnemyHealth + healthGrowth) * healthMultiplier)));
         enemy.currentHealth = enemy.maxHealth;
         enemy.patrolSpeed = Mathf.Min(MaxPatrolSpeed, (BasePatrolSpeed + floorIndex * 0.12f) * config.patrolSpeedMultiplier);
         enemy.chaseSpeed = Mathf.Min(MaxChaseSpeed, (BaseChaseSpeed + floorIndex * 0.2f) * config.chaseSpeedMultiplier);
         enemy.chaseRange = config.chaseRange;
-        enemy.xpReward = Mathf.Min(MaxEnemyXP, Mathf.Max(1, Mathf.RoundToInt((BaseEnemyXP + floorIndex * 4) * config.xpMultiplier)));
+        int xpCap = bossEncounter ? MaxEnemyXP * 3 : MaxEnemyXP;
+        float xpMultiplier = bossEncounter ? config.xpMultiplier * 1.9f : config.xpMultiplier;
+        enemy.xpReward = Mathf.Min(xpCap, Mathf.Max(1, Mathf.RoundToInt((BaseEnemyXP + floorIndex * 4) * xpMultiplier)));
     }
 
     Vector2 ResolveAwayFromPlayer(Vector2 desired, float minDistance)
@@ -860,7 +1024,28 @@ public class GameBootstrap : MonoBehaviour
         hud.passiveText.GetComponent<RectTransform>().sizeDelta = new Vector2(560, 40);
         hud.timerText = MakeText(cv.transform, "Time: 0s", new Vector2(-18, -18), new Vector2(1, 1), 24, TextAnchor.UpperRight, Color.white);
         hud.objectiveText = MakeText(cv.transform, "", new Vector2(0, 30), new Vector2(0.5f, 0), 24, TextAnchor.LowerCenter, new Color(0.85f, 0.9f, 1f));
+        BuildBossHealthBar(cv.transform, hud);
         MakeText(cv.transform, "ESC = pause", new Vector2(-20, 30), new Vector2(1, 0), 18, TextAnchor.LowerRight, new Color(1, 1, 1, 0.55f));
+    }
+
+    void BuildBossHealthBar(Transform parent, HUD hud)
+    {
+        GameObject root = new GameObject("BossHealthBar");
+        root.transform.SetParent(parent, false);
+        RectTransform rt = root.AddComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0f);
+        rt.anchoredPosition = new Vector2(0f, 88f);
+        rt.sizeDelta = new Vector2(620f, 52f);
+
+        Image panel = root.AddComponent<Image>();
+        panel.sprite = Art2D.FromPngFile(UiPanelSpritePath, 100f, FilterMode.Bilinear);
+        panel.color = new Color(0.05f, 0.025f, 0.06f, 0.86f);
+
+        hud.bossBarText = MakeText(root.transform, "Dungeon Boss", new Vector2(0, 13), new Vector2(0.5f, 0.5f), 20, TextAnchor.MiddleCenter, new Color(1f, 0.86f, 0.96f));
+        hud.bossBarText.GetComponent<RectTransform>().sizeDelta = new Vector2(560f, 24f);
+        hud.bossBarFill = MakeHudBar(root.transform, new Vector2(20, -28), new Vector2(580, 16), new Color(0.12f, 0.025f, 0.04f, 0.95f), new Color(0.95f, 0.16f, 0.34f, 0.98f));
+        hud.bossBarRoot = root;
+        root.SetActive(false);
     }
 
     Image MakeUiImage(Transform parent, string name, Vector2 pos, Vector2 anchor, Vector2 size, Color color, string spritePath = null)
