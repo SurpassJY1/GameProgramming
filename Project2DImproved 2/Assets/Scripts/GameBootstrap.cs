@@ -1328,7 +1328,8 @@ public class GameBootstrap : MonoBehaviour
         MakeUiImage(page.transform, "TitleRuleTop", new Vector2(0, 292), new Vector2(0.5f, 0.5f), new Vector2(760, 4), new Color(0.28f, 0.82f, 1f, 0.68f));
         MakeUiImage(page.transform, "TitleRuleBottom", new Vector2(0, 108), new Vector2(0.5f, 0.5f), new Vector2(760, 4), new Color(1f, 0.72f, 0.18f, 0.7f));
         MakeText(page.transform, "DUNGEON KEY RUN", new Vector2(0, 220), new Vector2(0.5f, 0.5f), 72, TextAnchor.MiddleCenter, new Color(1f, 0.86f, 0.35f));
-        MakeText(page.transform, "Find the key. Avoid the guards. Escape the dungeon.", new Vector2(0, 145), new Vector2(0.5f, 0.5f), 26, TextAnchor.MiddleCenter, Color.white);
+        MakeText(page.transform, "Find the key. Reach deeper floors. Beat your best score.", new Vector2(0, 145), new Vector2(0.5f, 0.5f), 26, TextAnchor.MiddleCenter, Color.white);
+        menus.mainRecordText = MakeText(page.transform, GameManager.I != null ? GameManager.I.GetBestRecordSummary() : "Best Score: none yet", new Vector2(0, 92), new Vector2(0.5f, 0.5f), 22, TextAnchor.MiddleCenter, new Color(0.72f, 0.95f, 1f));
         MakeButton(page.transform, "Start Game", new Vector2(0, 40), menus.OnStart);
         MakeButton(page.transform, "Instructions", new Vector2(0, -40), menus.OnInstructions);
         MakeButton(page.transform, "Credits", new Vector2(0, -120), menus.OnCredits);
@@ -1372,12 +1373,12 @@ public class GameBootstrap : MonoBehaviour
     GameObject BuildEndPage(Transform parent, Menus menus, string title, Color titleColor, out Text resultText)
     {
         GameObject page = MakePagePanel(parent, title + "Page", new Color(0.03f, 0.02f, 0.05f, 0.8f));
-        MakeUiImage(page.transform, "ResultPanel", new Vector2(0, 20), new Vector2(0.5f, 0.5f), new Vector2(980, 520), new Color(0.85f, 0.9f, 1f, 0.92f), UiPanelSpritePath);
-        MakeText(page.transform, title, new Vector2(0, 195), new Vector2(0.5f, 0.5f), 76, TextAnchor.MiddleCenter, titleColor);
-        resultText = MakeText(page.transform, "", new Vector2(0, 70), new Vector2(0.5f, 0.5f), 30, TextAnchor.MiddleCenter, Color.white);
-        resultText.GetComponent<RectTransform>().sizeDelta = new Vector2(900, 120);
-        MakeButton(page.transform, "Play Again", new Vector2(0, -60), menus.OnRestart);
-        MakeButton(page.transform, "Main Menu", new Vector2(0, -140), menus.OnReturnHome);
+        MakeUiImage(page.transform, "ResultPanel", new Vector2(0, 18), new Vector2(0.5f, 0.5f), new Vector2(1020, 650), new Color(0.85f, 0.9f, 1f, 0.92f), UiPanelSpritePath);
+        MakeText(page.transform, title, new Vector2(0, 285), new Vector2(0.5f, 0.5f), 70, TextAnchor.MiddleCenter, titleColor);
+        resultText = MakeText(page.transform, "", new Vector2(0, 45), new Vector2(0.5f, 0.5f), 24, TextAnchor.MiddleCenter, Color.white);
+        resultText.GetComponent<RectTransform>().sizeDelta = new Vector2(930, 410);
+        MakeButton(page.transform, "Play Again", new Vector2(0, -250), menus.OnRestart);
+        MakeButton(page.transform, "Main Menu", new Vector2(0, -330), menus.OnReturnHome);
         page.SetActive(false);
         return page;
     }

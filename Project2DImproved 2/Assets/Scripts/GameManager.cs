@@ -16,6 +16,17 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager I { get; private set; }
     const string TutorialSuccessfulRunsKey = "DungeonKeyRun_TutorialSuccessfulRuns";
+    const string BestScoreKey = "DungeonKeyRun_BestScore";
+    const string BestFloorKey = "DungeonKeyRun_BestFloor";
+    const string BestEnemiesKey = "DungeonKeyRun_BestEnemies";
+    const string BestTimeKey = "DungeonKeyRun_BestTime";
+    const string BestLevelKey = "DungeonKeyRun_BestLevel";
+    const string LeaderboardScoreKey = "DungeonKeyRun_LeaderboardScore_";
+    const string LeaderboardFloorKey = "DungeonKeyRun_LeaderboardFloor_";
+    const string LeaderboardEnemiesKey = "DungeonKeyRun_LeaderboardEnemies_";
+    const string LeaderboardTimeKey = "DungeonKeyRun_LeaderboardTime_";
+    const string LeaderboardLevelKey = "DungeonKeyRun_LeaderboardLevel_";
+    const int LeaderboardSize = 5;
     const int BossFloorInterval = 3;
 
     public enum Phase { Menu, Playing, Paused, LevelUp, PassiveUpgrade, Won, GameOver }
@@ -50,6 +61,8 @@ public class GameManager : MonoBehaviour
     public int moveSpeedUpLevel;
     public int fireCooldownBonusLevel;
     public int xpBonusLevel;
+    public int finalRunScore;
+    public bool lastRunWasNewRecord;
 
     // Boss state is intentionally kept in GameManager instead of HUD. The gameplay rule is that a
     // formal boss encounter seals the exit, while the HUD only visualizes the same state. Elite
@@ -175,6 +188,7 @@ public class GameManager : MonoBehaviour
         {
             phase = Phase.GameOver;
             Time.timeScale = 0f;
+            RecordRunResult();
             OnRunEnded?.Invoke();
         }
 
@@ -316,6 +330,37 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    public int BestScore { get { return PlayerPrefs.GetInt(BestScoreKey, 0); } }
+    public int BestFloor { get { return PlayerPrefs.GetInt(BestFloorKey, 0); } }
+
+    public string GetBestRecordSummary()
+    {
+        int bestScore = BestScore;
+        if (bestScore <= 0) return "Best Score: none yet";
+
+        return "Best Score: " + bestScore +
+            "   Best Floor: " + BestFloor +
+            "   Time: " + PlayerPrefs.GetInt(BestTimeKey, 0) + "s";
+    }
+
+    public string GetLeaderboardSummary()
+    {
+        string summary = "";
+        for (int i = 0; i < LeaderboardSize; i++)
+        {
+            int score = PlayerPrefs.GetInt(LeaderboardScoreKey + i, 0);
+            if (score <= 0) continue;
+
+            string line = (i + 1) + ". Score " + score +
+                " | Floor " + PlayerPrefs.GetInt(LeaderboardFloorKey + i, 0) +
+                " | Level " + PlayerPrefs.GetInt(LeaderboardLevelKey + i, 0) +
+                " | " + PlayerPrefs.GetInt(LeaderboardTimeKey + i, 0) + "s";
+            summary = string.IsNullOrEmpty(summary) ? line : summary + "\n" + line;
+        }
+
+        return string.IsNullOrEmpty(summary) ? "No recorded runs yet." : summary;
+    }
+
     // What: Return the player-facing passive upgrade name for UI cards.
     // Human: Wrote final passive names.
     // AI: Helped expose a public wrapper for UI code.
@@ -419,10 +464,78 @@ public class GameManager : MonoBehaviour
         moveSpeedUpLevel = 0;
         fireCooldownBonusLevel = 0;
         xpBonusLevel = 0;
+        finalRunScore = 0;
+        lastRunWasNewRecord = false;
         bossAliveThisFloor = false;
         activeBoss = null;
         playerCombat = null;
         player = null;
+    }
+
+    // What: Persist the finished run into best-record and local leaderboard storage.
+    // Human: Wanted each run to answer whether the player broke their record.
+    // AI: Helped keep record storage local and simple with PlayerPrefs.
+    void RecordRunResult()
+    {
+        finalRunScore = CurrentScore;
+        int finalFloor = Mathf.Max(1, currentFloor);
+        int finalEnemies = Mathf.Max(0, enemiesDefeated);
+        int finalTime = Mathf.FloorToInt(elapsed);
+        int finalLevel = Mathf.Max(1, playerLevel);
+        int oldBestScore = BestScore;
+        int oldBestFloor = BestFloor;
+
+        lastRunWasNewRecord = finalRunScore > oldBestScore ||
+            (finalRunScore == oldBestScore && finalFloor > oldBestFloor);
+
+        if (lastRunWasNewRecord)
+        {
+            PlayerPrefs.SetInt(BestScoreKey, finalRunScore);
+            PlayerPrefs.SetInt(BestFloorKey, finalFloor);
+            PlayerPrefs.SetInt(BestEnemiesKey, finalEnemies);
+            PlayerPrefs.SetInt(BestTimeKey, finalTime);
+            PlayerPrefs.SetInt(BestLevelKey, finalLevel);
+        }
+
+        InsertLeaderboardEntry(finalRunScore, finalFloor, finalEnemies, finalTime, finalLevel);
+        PlayerPrefs.Save();
+    }
+
+    void InsertLeaderboardEntry(int score, int floor, int enemies, int time, int level)
+    {
+        int insertIndex = LeaderboardSize;
+        for (int i = 0; i < LeaderboardSize; i++)
+        {
+            int savedScore = PlayerPrefs.GetInt(LeaderboardScoreKey + i, 0);
+            int savedFloor = PlayerPrefs.GetInt(LeaderboardFloorKey + i, 0);
+            if (score > savedScore || (score == savedScore && floor > savedFloor))
+            {
+                insertIndex = i;
+                break;
+            }
+        }
+
+        if (insertIndex >= LeaderboardSize) return;
+
+        for (int i = LeaderboardSize - 1; i > insertIndex; i--)
+        {
+            CopyLeaderboardEntry(i - 1, i);
+        }
+
+        PlayerPrefs.SetInt(LeaderboardScoreKey + insertIndex, score);
+        PlayerPrefs.SetInt(LeaderboardFloorKey + insertIndex, floor);
+        PlayerPrefs.SetInt(LeaderboardEnemiesKey + insertIndex, enemies);
+        PlayerPrefs.SetInt(LeaderboardTimeKey + insertIndex, time);
+        PlayerPrefs.SetInt(LeaderboardLevelKey + insertIndex, level);
+    }
+
+    void CopyLeaderboardEntry(int from, int to)
+    {
+        PlayerPrefs.SetInt(LeaderboardScoreKey + to, PlayerPrefs.GetInt(LeaderboardScoreKey + from, 0));
+        PlayerPrefs.SetInt(LeaderboardFloorKey + to, PlayerPrefs.GetInt(LeaderboardFloorKey + from, 0));
+        PlayerPrefs.SetInt(LeaderboardEnemiesKey + to, PlayerPrefs.GetInt(LeaderboardEnemiesKey + from, 0));
+        PlayerPrefs.SetInt(LeaderboardTimeKey + to, PlayerPrefs.GetInt(LeaderboardTimeKey + from, 0));
+        PlayerPrefs.SetInt(LeaderboardLevelKey + to, PlayerPrefs.GetInt(LeaderboardLevelKey + from, 0));
     }
 
     // What: Spend the current XP threshold and open the weapon upgrade UI.

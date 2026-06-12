@@ -20,6 +20,7 @@ public class Menus : MonoBehaviour
     public GameObject gameOverPage;
     public Text winText;
     public Text gameOverText;
+    public Text mainRecordText;
     public AudioClip clickClip;
 
     AudioSource audioSrc;
@@ -64,6 +65,10 @@ public class Menus : MonoBehaviour
             if (instructionsPage != null) instructionsPage.SetActive(false);
             if (creditsPage != null) creditsPage.SetActive(false);
         }
+        else
+        {
+            UpdateMainRecordText();
+        }
     }
 
     // What: Build the final run summary shown on win and game-over pages.
@@ -73,20 +78,30 @@ public class Menus : MonoBehaviour
     {
         GameManager gm = GameManager.I;
         string time = Mathf.FloorToInt(gm.elapsed) + " seconds";
+        int score = gm.finalRunScore > 0 ? gm.finalRunScore : gm.CurrentScore;
+        string recordLine = gm.lastRunWasNewRecord ? "New Record!\n" : "";
         // The same summary is used for win and game-over pages so both endings show what the player
         // accomplished during the run.
         string runSummary =
-            "Score: " + gm.CurrentScore + "\n" +
+            recordLine +
+            "Score: " + score + "\n" +
             "Final Floor: " + gm.currentFloor + "\n" +
             "Final Level: " + gm.playerLevel + "\n" +
             "Enemies Defeated: " + gm.enemiesDefeated + "\n" +
             "Survival Time: " + time + "\n" +
             "Weapon Build: " + gm.GetWeaponBuildSummary() + "\n" +
-            "Passive Build: " + gm.GetPassiveBuildSummary();
+            "Passive Build: " + gm.GetPassiveBuildSummary() + "\n\n" +
+            "Leaderboard\n" + gm.GetLeaderboardSummary();
 
         if (winText != null) winText.text = "Run Complete\n\n" + runSummary;
         if (gameOverText != null)
             gameOverText.text = "Infinite Run Ended\n\n" + runSummary;
+    }
+
+    void UpdateMainRecordText()
+    {
+        if (mainRecordText == null || GameManager.I == null) return;
+        mainRecordText.text = GameManager.I.GetBestRecordSummary();
     }
 
     // What: Play the shared menu click sound for button callbacks.
