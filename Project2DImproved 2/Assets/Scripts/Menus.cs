@@ -76,6 +76,7 @@ public class Menus : MonoBehaviour
         // The same summary is used for win and game-over pages so both endings show what the player
         // accomplished during the run.
         string runSummary =
+            "Score: " + gm.CurrentScore + "\n" +
             "Final Floor: " + gm.currentFloor + "\n" +
             "Final Level: " + gm.playerLevel + "\n" +
             "Enemies Defeated: " + gm.enemiesDefeated + "\n" +

@@ -301,6 +301,21 @@ public class GameManager : MonoBehaviour
         return string.IsNullOrEmpty(summary) ? "None" : summary;
     }
 
+    // What: Combine run progress into one score for endless-mode record chasing.
+    // Human: Chose score as the main long-term goal for infinite runs.
+    // AI: Helped weight floor progress above enemy farming.
+    public int CurrentScore
+    {
+        get
+        {
+            int survivalSeconds = Mathf.FloorToInt(elapsed);
+            return Mathf.Max(0, floorsCleared * 10000 +
+                enemiesDefeated * 100 +
+                playerLevel * 250 +
+                survivalSeconds);
+        }
+    }
+
     // What: Return the player-facing passive upgrade name for UI cards.
     // Human: Wrote final passive names.
     // AI: Helped expose a public wrapper for UI code.
