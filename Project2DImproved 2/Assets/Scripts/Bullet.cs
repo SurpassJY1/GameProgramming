@@ -27,8 +27,14 @@ public class Bullet : MonoBehaviour
     float born;
     readonly List<Enemy> hitEnemies = new List<Enemy>();
 
+    // What: Record the spawn time so lifetime expiry can be checked later.
+    // Human: Tuned bullet lifetime for room-sized combat.
+    // AI: Helped keep lifetime tracking simple and local to the projectile.
     void Start() { born = Time.time; }
 
+    // What: Move the bullet, detect walls/enemies, and expire when lifetime runs out.
+    // Human: Chose fast projectile combat with wall collision.
+    // AI: Helped use manual casts to avoid tunnelling at high speeds.
     void Update()
     {
         if (Time.time - born >= lifetime)
@@ -64,8 +70,13 @@ public class Bullet : MonoBehaviour
         transform.position = current + direction * distance;
     }
 
+    // What: Find the nearest enemy hit along this frame's bullet movement.
+    // Human: Designed piercing shots to pass through multiple enemies.
+    // AI: Helped skip enemies already hit by the same piercing projectile.
     RaycastHit2D FindEnemyHit(Vector2 current, Vector2 direction, float distance)
     {
+        // CircleCastAll can return several enemies. Pick the closest unhit enemy so piercing
+        // projectiles move through targets in physical order.
         RaycastHit2D[] hits = Physics2D.CircleCastAll(current, radius, direction, distance);
         RaycastHit2D bestHit = default;
         float bestDistance = float.MaxValue;
@@ -83,8 +94,13 @@ public class Bullet : MonoBehaviour
         return bestHit;
     }
 
+    // What: Handle backup trigger collisions with enemies or walls.
+    // Human: Required reliable bullet contact even around spawn overlaps.
+    // AI: Helped keep trigger logic consistent with manual cast logic.
     void OnTriggerEnter2D(Collider2D other)
     {
+        // Trigger callbacks are a backup for overlap cases at spawn or after piercing. The Update
+        // cast handles most high-speed travel.
         Enemy enemy = other.GetComponent<Enemy>();
         if (enemy != null && !hitEnemies.Contains(enemy))
         {
@@ -96,6 +112,9 @@ public class Bullet : MonoBehaviour
             HitAndDestroy(transform.position);
     }
 
+    // What: Play impact feedback, apply explosion damage if enabled, and remove the bullet.
+    // Human: Chose impact/explosion feedback for weapon upgrades.
+    // AI: Helped centralize the destroy path so wall hits and timeout hits share behaviour.
     void HitAndDestroy(Vector3 position)
     {
         PlayImpact(position);
@@ -104,6 +123,9 @@ public class Bullet : MonoBehaviour
         Destroy(gameObject);
     }
 
+    // What: Damage one enemy, apply upgrade statuses, then either pierce or destroy the bullet.
+    // Human: Designed direct damage, burn, slow, explosion, and piercing upgrades.
+    // AI: Helped order effects so hit feedback and status application stay predictable.
     void HitEnemy(Enemy enemy, Vector3 hitPoint, Vector2 direction)
     {
         if (enemy == null || hitEnemies.Contains(enemy)) return;
@@ -129,11 +151,19 @@ public class Bullet : MonoBehaviour
         Destroy(gameObject);
     }
 
+    // What: Play the bullet impact sound at the hit position.
+    // Human: Selected the impact audio asset.
+    // AI: Helped use PlayClipAtPoint to avoid managing audio children on bullets.
     void PlayImpact(Vector3 position)
     {
+        // PlayClipAtPoint creates a temporary AudioSource at the impact position, which keeps the
+        // bullet prefab free of extra child audio objects.
         if (impactClip != null) AudioSource.PlayClipAtPoint(impactClip, position, 0.45f);
     }
 
+    // What: Apply area damage around an impact when Explosive Shot is active.
+    // Human: Designed explosive shot as an optional weapon upgrade.
+    // AI: Helped guard the method so normal bullets have no area damage cost.
     void Explode(Vector3 position)
     {
         // Explosive Shot is optional. When inactive, radius/damage stay at zero and this method
@@ -152,6 +182,9 @@ public class Bullet : MonoBehaviour
         SpawnExplosion(position);
     }
 
+    // What: Create the visible blast circle for an explosive hit.
+    // Human: Chose the explosion color/scale feedback.
+    // AI: Helped reuse BulletImpact for fade-out and cleanup.
     void SpawnExplosion(Vector3 position)
     {
         GameObject explosion = new GameObject("BulletExplosion");
@@ -167,8 +200,12 @@ public class Bullet : MonoBehaviour
         effect.drift = Vector2.zero;
     }
 
+    // What: Create the small spark shown for every bullet impact.
+    // Human: Chose the hit spark visual feedback.
+    // AI: Helped keep impact creation lightweight and self-cleaning.
     void SpawnImpact(Vector3 position)
     {
+        // Tiny hit spark for normal bullet contacts. BulletImpact owns its own fade and cleanup.
         GameObject impact = new GameObject("BulletImpact");
         impact.transform.position = position;
         impact.transform.localScale = Vector3.one * 0.12f;
@@ -182,6 +219,12 @@ public class Bullet : MonoBehaviour
     }
 }
 
+/// Short-lived visual effect used by bullet hits, explosions, and enemy ability pulses.
+///
+/// Authorship note:
+/// - Student-owned implementation: impact feedback requirement and final fade/drift tuning.
+/// - AI-assisted support: review suggestions and comments explaining why one tiny component is
+///   reused for several temporary VFX objects.
 public class BulletImpact : MonoBehaviour
 {
     public Vector2 drift;
@@ -190,13 +233,21 @@ public class BulletImpact : MonoBehaviour
     float t;
     SpriteRenderer sr;
 
+    // What: Cache the renderer used by this temporary visual effect.
+    // Human: Tuned the impact effect appearance.
+    // AI: Helped keep effect setup minimal.
     void Start()
     {
         sr = GetComponent<SpriteRenderer>();
     }
 
+    // What: Move, shrink, fade, and destroy this temporary visual effect.
+    // Human: Chose the hit/explosion fade timing.
+    // AI: Helped make each effect responsible for its own cleanup.
     void Update()
     {
+        // The effect is intentionally self-cleaning. Runtime-created VFX objects do not need to be
+        // tracked by GameBootstrap or pooled for this small project.
         t += Time.deltaTime;
         transform.position += (Vector3)(drift * Time.deltaTime);
         transform.localScale *= 0.94f;

@@ -1,5 +1,12 @@
 using UnityEngine;
 
+/// Enemy type identifiers used by the spawner, fallback art, and ability controller.
+///
+/// Authorship note:
+/// - Student-owned design: enemy lineup, unlock order, and the decision to include boss types that
+///   later return as elite enemies.
+/// - AI-assisted support: naming/organization review so the enum can be shared cleanly by
+///   GameBootstrap, EnemyAbilityController, and Art2D fallback art.
 public enum EnemyKind
 {
     SlimeScout,
@@ -67,6 +74,9 @@ public class Enemy : MonoBehaviour
     public bool IsDead { get { return dead; } }
     public float HealthFraction { get { return maxHealth <= 0 ? 0f : (float)currentHealth / maxHealth; } }
 
+    // What: Cache this enemy's renderer and base color before gameplay starts.
+    // Human: Chose enemy tint/flash feedback.
+    // AI: Helped identify renderer state needed for visual reset.
     void Awake()
     {
         startPosition = transform.position;
@@ -74,11 +84,20 @@ public class Enemy : MonoBehaviour
         if (sr != null) baseColor = sr.color;
     }
 
+    // What: Subscribe to run start and initialize health/status values.
+    // Human: Chose enemies reset cleanly when a run restarts.
+    // AI: Helped connect enemies to GameManager.OnGameStarted.
+    // What: Initialize ability timers with offsets so enemies do not all attack at once.
+    // Human: Tuned ability opening delays and boss timer defaults.
+    // AI: Helped separate ability timing from base enemy movement.
     void Start()
     {
         ResetForNewRun();
     }
 
+    // What: Reset health, status effects, death state, and renderer color for a new run.
+    // Human: Tuned enemy baseline values.
+    // AI: Helped ensure burn/slow/flash state does not leak across restarts.
     void ResetForNewRun()
     {
         dead = false;
@@ -96,6 +115,12 @@ public class Enemy : MonoBehaviour
         if (sr != null) sr.color = baseColor;
     }
 
+    // What: Update status effects, choose patrol/chase destination, move, and repaint visuals.
+    // Human: Designed patrol plus chase enemy behaviour.
+    // AI: Helped keep special attacks in EnemyAbilityController so base movement stays readable.
+    // What: Dispatch this enemy's special behaviour based on its EnemyKind.
+    // Human: Designed each enemy type's combat identity.
+    // AI: Helped organize the switch so each ability stays in its own method.
     void Update()
     {
         // The base enemy loop is deliberately small: update status effects, decide whether to chase,
@@ -116,6 +141,9 @@ public class Enemy : MonoBehaviour
         UpdateVisualState();
     }
 
+    // What: Decide whether the enemy should chase the player right now.
+    // Human: Chose line-of-sight and alert-after-hit rules.
+    // AI: Helped make walls block sight for route-planning gameplay.
     bool ShouldChase()
     {
         if (player == null) return false;
@@ -127,12 +155,18 @@ public class Enemy : MonoBehaviour
         return !Physics2D.Raycast(transform.position, toPlayer.normalized, toPlayer.magnitude, wallMask);
     }
 
+    // What: Damage the player when this enemy overlaps the player trigger.
+    // Human: Chose contact damage as the base enemy threat.
+    // AI: Helped keep actual life loss inside Player.TakeHit/GameManager.
     void OnTriggerEnter2D(Collider2D other)
     {
         Player p = other.GetComponent<Player>();
         if (p != null) p.TakeHit(transform.position);
     }
 
+    // What: Apply incoming damage, flash, knock back, and alert this enemy.
+    // Human: Tuned hit reaction and damage values.
+    // AI: Helped route all damage through DealDamage for consistent death handling.
     public void TakeDamage(int damage, Vector3 hitSource)
     {
         if (dead || GameManager.I == null || GameManager.I.phase != GameManager.Phase.Playing) return;
@@ -143,6 +177,9 @@ public class Enemy : MonoBehaviour
         TryApplyKnockback((transform.position - hitSource).normalized * knockbackDistance);
     }
 
+    // What: Start or refresh burn damage-over-time on this enemy.
+    // Human: Designed Burn Shot as a weapon upgrade.
+    // AI: Helped store burn on the target so bullets can be simple stat snapshots.
     public void ApplyBurn(int damagePerTick, float duration)
     {
         if (dead || duration <= 0f || damagePerTick <= 0) return;
@@ -154,6 +191,9 @@ public class Enemy : MonoBehaviour
         UpdateVisualState();
     }
 
+    // What: Start or refresh a temporary movement slow on this enemy.
+    // Human: Designed Slow Shot as a crowd-control upgrade.
+    // AI: Helped clamp slow values so enemies remain readable and fair.
     public void ApplySlow(float multiplier, float duration)
     {
         if (dead || duration <= 0f) return;
@@ -164,6 +204,9 @@ public class Enemy : MonoBehaviour
         UpdateVisualState();
     }
 
+    // What: Restore health without exceeding maxHealth.
+    // Human: Designed healer enemies as support threats.
+    // AI: Helped make healing no-op for dead or nonpositive cases.
     public void Heal(int amount)
     {
         if (dead || amount <= 0) return;
@@ -173,12 +216,18 @@ public class Enemy : MonoBehaviour
         UpdateVisualState();
     }
 
+    // What: Force this enemy to stay alert/chasing for a short time.
+    // Human: Chose that damaged enemies should pressure the player.
+    // AI: Helped reuse this hook from attacks and hit reactions.
     public void ForceAlert(float duration)
     {
         if (dead) return;
         alertTimer = Mathf.Max(alertTimer, duration);
     }
 
+    // What: Check distance and wall line-of-sight from this enemy to the player.
+    // Human: Chose walls as stealth/route-planning blockers.
+    // AI: Helped centralize the sight check for movement and abilities.
     public bool HasLineOfSightToPlayer(float range)
     {
         if (player == null) return false;
@@ -188,11 +237,17 @@ public class Enemy : MonoBehaviour
         return !Physics2D.Raycast(transform.position, toPlayer.normalized, toPlayer.magnitude, wallMask);
     }
 
+    // What: Move this enemy by an ability-driven delta if the path is not blocked.
+    // Human: Designed dash/reposition abilities for advanced enemies.
+    // AI: Helped keep ability movement wall-safe.
     public void TryMoveAbilityDelta(Vector3 delta)
     {
         TryApplyKnockback(delta);
     }
 
+    // What: Subtract health and trigger death when health reaches zero.
+    // Human: Tuned enemy health and death pacing.
+    // AI: Helped keep all damage sources using one health path.
     void DealDamage(int amount)
     {
         if (dead) return;
@@ -202,6 +257,9 @@ public class Enemy : MonoBehaviour
         if (currentHealth <= 0) Die();
     }
 
+    // What: Mark the enemy dead, play rewards/audio, and deactivate the object.
+    // Human: Chose XP reward and boss-defeat progression behaviour.
+    // AI: Helped order boss defeat and enemy defeat notifications safely.
     public void Die()
     {
         if (dead) return;
@@ -215,6 +273,9 @@ public class Enemy : MonoBehaviour
         gameObject.SetActive(false);
     }
 
+    // What: Tick burn/slow timers and apply periodic burn damage.
+    // Human: Designed status effect durations and tick behaviour.
+    // AI: Helped keep status logic on the enemy target instead of each bullet.
     void UpdateStatusEffects()
     {
         // Burn and slow are owned by the target so multiple bullet types can apply them consistently.
@@ -247,6 +308,9 @@ public class Enemy : MonoBehaviour
         }
     }
 
+    // What: Update sprite color for hit flash, burn, slow, and normal state.
+    // Human: Chose visual feedback colors for enemy status.
+    // AI: Helped prioritize temporary flash over persistent status tint.
     void UpdateVisualState()
     {
         if (sr == null) return;
@@ -273,6 +337,9 @@ public class Enemy : MonoBehaviour
         sr.color = baseColor;
     }
 
+    // What: Push this enemy away from a hit without clipping through walls.
+    // Human: Tuned enemy knockback distance.
+    // AI: Helped use the same full/half movement idea as player knockback.
     void TryApplyKnockback(Vector3 delta)
     {
         if (delta.sqrMagnitude <= 0.0001f) return;
@@ -282,6 +349,9 @@ public class Enemy : MonoBehaviour
             transform.position = destination;
     }
 
+    // What: Move toward a destination with wall collision and axis-slide fallback.
+    // Human: Chose patrol/chase movement feel.
+    // AI: Helped implement wall-safe movement for generated rooms.
     void MoveWithWallCheck(Vector3 destination, float speed)
     {
         Vector2 current = transform.position;
@@ -324,6 +394,9 @@ public class EnemyAbilityController : MonoBehaviour
     public Sprite projectileSprite;
     public Sprite slimeSprite;
     public Transform spawnRoot;
+    // Filled by GameBootstrap from the current floor. Normal early enemies use 1.0; later floors
+    // increase cooldown pressure, projectile speed, range, and select summon caps.
+    public float difficultyScale = 1f;
 
     float abilityTimer;
     float bossProjectileTimer;
@@ -336,6 +409,9 @@ public class EnemyAbilityController : MonoBehaviour
     int summonsMade;
     bool exploded;
 
+    // What: Initialize ability timers with offsets so enemies do not all attack at once.
+    // Human: Tuned ability opening delays and boss timer defaults.
+    // AI: Helped separate ability timing from base enemy movement.
     void Start()
     {
         owner = owner != null ? owner : GetComponent<Enemy>();
@@ -346,6 +422,9 @@ public class EnemyAbilityController : MonoBehaviour
         bossPulseTimer = 3.1f;
     }
 
+    // What: Dispatch this enemy's special behaviour based on its EnemyKind.
+    // Human: Designed each enemy type's combat identity.
+    // AI: Helped organize the switch so each ability stays in its own method.
     void Update()
     {
         if (owner == null || owner.IsDead || GameManager.I == null || GameManager.I.phase != GameManager.Phase.Playing) return;
@@ -390,19 +469,25 @@ public class EnemyAbilityController : MonoBehaviour
         }
     }
 
+    // What: Fire one projectile at the player after cooldown and line-of-sight checks.
+    // Human: Designed ranged pressure for Spark/Frost/boss enemies.
+    // AI: Helped parameterize speed, damage, slow, lifetime, and color for reuse.
     void UpdateProjectileAttack(float interval, float range, float speed, int damage, float slowDuration, float slowMultiplier, float lifetime, Color color)
     {
         // Spark Spitter and Frost Wisp share the same ranged attack path. The passed-in parameters
         // decide whether the projectile deals damage, applies slow, or only creates pressure.
         abilityTimer -= Time.deltaTime;
-        if (abilityTimer > 0f || !owner.HasLineOfSightToPlayer(range)) return;
+        if (abilityTimer > 0f || !owner.HasLineOfSightToPlayer(ScaledRange(range))) return;
 
-        abilityTimer = interval + Random.Range(-0.18f, 0.28f);
+        abilityTimer = ScaledInterval(interval, 0.85f) + Random.Range(-0.18f, 0.28f);
         Vector2 direction = ((Vector2)player.position - (Vector2)transform.position).normalized;
-        SpawnEnemyProjectile(direction, speed, damage, slowDuration, slowMultiplier, lifetime > 0f ? lifetime : 1.4f, color);
+        SpawnEnemyProjectile(direction, ScaledSpeed(speed), damage, slowDuration, slowMultiplier, lifetime > 0f ? lifetime : 1.4f, color);
         owner.ForceAlert(2.4f);
     }
 
+    // What: Create and configure one enemy projectile object.
+    // Human: Chose enemy projectile readability and collision behaviour.
+    // AI: Helped build the projectile fully in code for the runtime-generated scene.
     void SpawnEnemyProjectile(Vector2 direction, float speed, int damage, float slowDuration, float slowMultiplier, float lifetime, Color color)
     {
         GameObject projectile = new GameObject(kind + " Projectile");
@@ -433,27 +518,33 @@ public class EnemyAbilityController : MonoBehaviour
         enemyProjectile.wallMask = wallMask;
     }
 
+    // What: Make Bomb Sprite explode when the player gets close.
+    // Human: Designed proximity explosion as a risk/reward enemy.
+    // AI: Helped scale trigger radius and effect size with difficulty.
     void UpdateBombSprite()
     {
         if (exploded) return;
 
         float distance = Vector2.Distance(transform.position, player.position);
-        if (distance > 0.8f) return;
+        if (distance > Mathf.Min(1.05f, 0.8f * difficultyScale)) return;
 
         exploded = true;
         Player target = player.GetComponent<Player>();
-        if (target != null && distance <= 1.25f) target.TakeHit(transform.position);
-        SpawnPulse(new Color(1f, 0.55f, 0.15f, 0.55f), 2.3f, 0.32f);
+        if (target != null && distance <= Mathf.Min(1.55f, 1.25f * difficultyScale)) target.TakeHit(transform.position);
+        SpawnPulse(new Color(1f, 0.55f, 0.15f, 0.55f), Mathf.Min(2.8f, 2.3f * difficultyScale), 0.32f);
         owner.Die();
     }
 
+    // What: Handle Dash Imp warning, dash movement, and cooldown.
+    // Human: Designed a readable windup before fast movement.
+    // AI: Helped split dash into windup and active dash timers.
     void UpdateDashImp()
     {
         // Dash has a short windup pulse first, giving the player a readable warning.
         if (dashTimer > 0f)
         {
             dashTimer -= Time.deltaTime;
-            owner.TryMoveAbilityDelta((Vector3)(dashDirection * (7.4f * Time.deltaTime)));
+            owner.TryMoveAbilityDelta((Vector3)(dashDirection * (ScaledSpeed(7.4f) * Time.deltaTime)));
             return;
         }
 
@@ -469,14 +560,17 @@ public class EnemyAbilityController : MonoBehaviour
         }
 
         abilityTimer -= Time.deltaTime;
-        if (abilityTimer > 0f || !owner.HasLineOfSightToPlayer(4.6f)) return;
+        if (abilityTimer > 0f || !owner.HasLineOfSightToPlayer(ScaledRange(4.6f))) return;
 
-        abilityTimer = 2.4f;
-        dashWindup = 0.42f;
+        abilityTimer = ScaledInterval(2.4f, 1.25f);
+        dashWindup = ScaledInterval(0.42f, 0.28f);
         SpawnPulse(new Color(1f, 0.92f, 0.25f, 0.26f), 1.4f, 0.22f);
         owner.ForceAlert(2.2f);
     }
 
+    // What: Heal nearby damaged allies on a cooldown.
+    // Human: Designed Healer Fairy as a support enemy.
+    // AI: Helped avoid self-healing so fights do not stall forever.
     void UpdateHealerFairy()
     {
         // The healer supports nearby enemies but does not heal itself. This keeps the support role
@@ -484,8 +578,8 @@ public class EnemyAbilityController : MonoBehaviour
         abilityTimer -= Time.deltaTime;
         if (abilityTimer > 0f) return;
 
-        abilityTimer = 3.4f;
-        Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, 2.35f);
+        abilityTimer = ScaledInterval(3.4f, 1.9f);
+        Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, ScaledRange(2.35f));
         bool healed = false;
         for (int i = 0; i < hits.Length; i++)
         {
@@ -499,19 +593,26 @@ public class EnemyAbilityController : MonoBehaviour
         if (healed) SpawnPulse(new Color(0.5f, 1f, 0.68f, 0.3f), 2.6f, 0.35f);
     }
 
+    // What: Summon small slime allies when the player is in sight.
+    // Human: Designed Summoner Shade as a pressure multiplier.
+    // AI: Helped cap summons so enemy growth stays controlled.
     void UpdateSummonerShade()
     {
         // Summoning is capped per enemy so late floors add pressure without creating unlimited
         // enemy growth or performance problems.
-        if (summonsMade >= 3) return;
+        int summonCap = difficultyScale >= 1.25f ? 4 : 3;
+        if (summonsMade >= summonCap) return;
 
         abilityTimer -= Time.deltaTime;
-        if (abilityTimer > 0f || !owner.HasLineOfSightToPlayer(5.0f)) return;
+        if (abilityTimer > 0f || !owner.HasLineOfSightToPlayer(ScaledRange(5.0f))) return;
 
-        abilityTimer = 4.8f;
+        abilityTimer = ScaledInterval(4.8f, 2.8f);
         if (TrySummonSlime()) summonsMade++;
     }
 
+    // What: Try to place one summoned slime near the summoner without spawning inside walls.
+    // Human: Chose summoned slime stats and XP reward.
+    // AI: Helped implement repeated safe-position attempts.
     bool TrySummonSlime()
     {
         // Try several nearby positions so summoned enemies do not appear inside walls.
@@ -548,9 +649,9 @@ public class EnemyAbilityController : MonoBehaviour
             enemy.wallMask = wallMask;
             enemy.maxHealth = 1;
             enemy.currentHealth = 1;
-            enemy.patrolSpeed = 1.7f;
-            enemy.chaseSpeed = 2.45f;
-            enemy.chaseRange = 2.8f;
+            enemy.patrolSpeed = ScaledSpeed(1.7f);
+            enemy.chaseSpeed = ScaledSpeed(2.45f);
+            enemy.chaseRange = ScaledRange(2.8f);
             enemy.xpReward = 2;
             enemy.collisionRadius = 0.3f;
 
@@ -561,18 +662,24 @@ public class EnemyAbilityController : MonoBehaviour
         return false;
     }
 
+    // What: Give Crystal Brute a short forward pressure step.
+    // Human: Designed Crystal Brute as a heavy elite threat.
+    // AI: Helped scale the lunge with late-floor difficulty.
     void UpdateCrystalBrute()
     {
         abilityTimer -= Time.deltaTime;
-        if (abilityTimer > 0f || !owner.HasLineOfSightToPlayer(4.2f)) return;
+        if (abilityTimer > 0f || !owner.HasLineOfSightToPlayer(ScaledRange(4.2f))) return;
 
-        abilityTimer = 3.2f;
+        abilityTimer = ScaledInterval(3.2f, 1.8f);
         Vector2 direction = ((Vector2)player.position - (Vector2)transform.position).normalized;
-        owner.TryMoveAbilityDelta((Vector3)(direction * 0.75f));
+        owner.TryMoveAbilityDelta((Vector3)(direction * Mathf.Min(1.05f, 0.75f * difficultyScale)));
         SpawnPulse(new Color(0.7f, 0.92f, 1f, 0.26f), 2.0f, 0.24f);
         owner.ForceAlert(2.5f);
     }
 
+    // What: Run Slime King's summon and close-range slam behaviour.
+    // Human: Designed Slime King as the first boss and later elite.
+    // AI: Helped branch boss mode versus elite mode using owner.isBoss.
     void UpdateSlimeKing()
     {
         // Slime King is the summoner boss. In full boss mode it can spawn several slimes and uses
@@ -605,6 +712,9 @@ public class EnemyAbilityController : MonoBehaviour
         }
     }
 
+    // What: Run Frost Queen's slowing projectiles and reposition dash.
+    // Human: Designed Frost Queen as a space-control boss.
+    // AI: Helped tune boss volleys separately from later elite behaviour.
     void UpdateFrostQueen()
     {
         // Frost Queen controls space with slowing projectiles. The real boss fires a wider volley,
@@ -635,6 +745,9 @@ public class EnemyAbilityController : MonoBehaviour
         }
     }
 
+    // What: Run Shade Overlord's projectile spread and summoning pressure.
+    // Human: Designed Shade Overlord as a mixed ranged/summon boss.
+    // AI: Helped keep elite mode lower intensity than boss mode.
     void UpdateShadeOverlord()
     {
         // Shade Overlord mixes projectile pressure with summons. Both modes keep the same two-part
@@ -662,6 +775,9 @@ public class EnemyAbilityController : MonoBehaviour
         }
     }
 
+    // What: Run Crystal Titan's dash, projectiles, and low-health shockwave.
+    // Human: Designed Crystal Titan as the late heavy-pressure boss.
+    // AI: Helped structure its windup, projectile, and pulse timers.
     void UpdateCrystalTitan()
     {
         // Crystal Titan is the heavy pressure boss: projectile shots, dash windup, and low-health
@@ -724,6 +840,36 @@ public class EnemyAbilityController : MonoBehaviour
         }
     }
 
+    // What: Scale ability cooldowns down as floor difficulty rises, but keep a minimum.
+    // Human: Requested higher late-game challenge.
+    // AI: Helped add caps so attacks remain readable.
+    float ScaledInterval(float baseInterval, float minimum)
+    {
+        // Shorter intervals create more pressure, but each ability keeps a readable lower bound.
+        return Mathf.Max(minimum, baseInterval / Mathf.Clamp(difficultyScale, 1f, 1.45f));
+    }
+
+    // What: Scale projectile and dash speeds from the floor difficulty value.
+    // Human: Wanted later floors to pressure movement more.
+    // AI: Helped reuse one difficulty scalar across ability types.
+    float ScaledSpeed(float baseSpeed)
+    {
+        // Projectile and dash speeds scale together with the floor pressure value.
+        return baseSpeed * Mathf.Clamp(difficultyScale, 1f, 1.45f);
+    }
+
+    // What: Increase ability range modestly on later floors.
+    // Human: Wanted high floors to be harder to kite safely.
+    // AI: Helped cap range growth so walls still matter.
+    float ScaledRange(float baseRange)
+    {
+        // Range increases are modest so walls and route planning still matter.
+        return baseRange + (Mathf.Clamp(difficultyScale, 1f, 1.45f) - 1f) * 1.25f;
+    }
+
+    // What: Rotate a direction vector by a number of degrees for projectile spreads.
+    // Human: Designed spread shots for boss pressure.
+    // AI: Helped keep the math in one helper.
     Vector2 Rotate(Vector2 vector, float degrees)
     {
         float radians = degrees * Mathf.Deg2Rad;
@@ -732,6 +878,9 @@ public class EnemyAbilityController : MonoBehaviour
         return new Vector2(vector.x * cos - vector.y * sin, vector.x * sin + vector.y * cos).normalized;
     }
 
+    // What: Spawn a fading circular pulse for ability warning or impact feedback.
+    // Human: Chose pulse colors and ability readability cues.
+    // AI: Helped reuse BulletImpact for cleanup.
     void SpawnPulse(Color color, float scale, float life)
     {
         GameObject pulse = new GameObject(kind + " Pulse");
@@ -767,11 +916,17 @@ public class EnemyProjectile : MonoBehaviour
 
     float born;
 
+    // What: Record spawn time for projectile lifetime checks.
+    // Human: Tuned enemy projectile lifetime.
+    // AI: Helped keep projectile expiry local.
     void Start()
     {
         born = Time.time;
     }
 
+    // What: Move the enemy projectile forward and destroy it on timeout or wall hit.
+    // Human: Chose projectile speed/range pressure.
+    // AI: Helped use CircleCast so shots do not pass through walls.
     void Update()
     {
         if (Time.time - born >= lifetime)
@@ -780,6 +935,8 @@ public class EnemyProjectile : MonoBehaviour
             return;
         }
 
+        // Enemy projectiles use the same manual wall cast idea as player bullets so fast shots do
+        // not pass through thin runtime-built wall colliders.
         Vector2 current = transform.position;
         Vector2 direction = transform.up;
         float distance = speed * Time.deltaTime;
@@ -792,11 +949,16 @@ public class EnemyProjectile : MonoBehaviour
         transform.position = current + direction * distance;
     }
 
+    // What: Apply projectile damage and/or slow when hitting the player.
+    // Human: Designed enemy projectile effects.
+    // AI: Helped support damage-only, slow-only, and combined projectile variants.
     void OnTriggerEnter2D(Collider2D other)
     {
         Player player = other.GetComponent<Player>();
         if (player == null) return;
 
+        // Damage and slow are optional. Frost projectiles can slow without costing a life, while
+        // Spark and boss shots can deal direct contact damage.
         if (damage > 0) player.TakeHit(transform.position);
         if (slowDuration > 0f) player.ApplyTemporarySlow(slowMultiplier, slowDuration);
         Destroy(gameObject);

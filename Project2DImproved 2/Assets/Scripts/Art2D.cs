@@ -4,10 +4,21 @@ using UnityEngine.Networking;
 
 /// Asset helpers. External licensed assets are loaded from StreamingAssets first; procedural
 /// sprites and synthesized clips remain as emergency fallbacks if files are missing.
+///
+/// Authorship note:
+/// - Student-owned implementation: final asset choices, fallback requirements, enemy/icon visual
+///   direction, and acceptance of the generated look in the playable build.
+/// - AI-assisted support: code organization review, procedural sprite/audio helper suggestions, and
+///   comment wording that documents which visuals are fallbacks rather than primary submitted art.
 public static class Art2D
 {
+    // What: Load a PNG from StreamingAssets and convert it into a Sprite.
+    // Human: Chose the real submitted asset files and pixels-per-unit values.
+    // AI: Helped write a reusable loader so generated scene code can request sprites by path.
     public static Sprite FromPngFile(string relativePath, float pixelsPerUnit = 100f, FilterMode filter = FilterMode.Point)
     {
+        // Runtime scene construction cannot rely on inspector-assigned Sprite references, so assets
+        // are loaded from StreamingAssets by relative path.
         string fullPath = Path.Combine(Application.streamingAssetsPath, relativePath);
         if (!File.Exists(fullPath)) return null;
 
@@ -19,6 +30,9 @@ public static class Art2D
             new Vector2(0.5f, 0.5f), pixelsPerUnit);
     }
 
+    // What: Load an audio file from StreamingAssets and convert it into an AudioClip.
+    // Human: Chose which external audio files are used for gameplay feedback.
+    // AI: Helped use UnityWebRequestMultimedia for runtime OGG/MP3 loading.
     public static AudioClip FromAudioFile(string relativePath, AudioType audioType)
     {
         if (string.IsNullOrEmpty(relativePath)) return null;
@@ -26,6 +40,8 @@ public static class Art2D
         string fullPath = Path.Combine(Application.streamingAssetsPath, relativePath);
         if (!File.Exists(fullPath)) return null;
 
+        // UnityWebRequestMultimedia handles compressed audio formats such as OGG/MP3 at runtime.
+        // The short timeout prevents a missing or invalid file from stalling scene setup forever.
         string url = "file://" + fullPath;
         using (UnityWebRequest request = UnityWebRequestMultimedia.GetAudioClip(url, audioType))
         {
@@ -38,6 +54,9 @@ public static class Art2D
         }
     }
 
+    // What: Generate an anti-aliased circular sprite in one solid color.
+    // Human: Chose circles for shadows, glows, pulses, and simple fallback art.
+    // AI: Helped implement the pixel loop and soft edge alpha.
     public static Sprite SolidCircle(Color color, int size = 64)
     {
         var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
@@ -57,6 +76,9 @@ public static class Art2D
             new Vector2(0.5f, 0.5f), 100f);
     }
 
+    // What: Generate an upward triangle sprite.
+    // Human: Used simple geometric shapes for fallback icons and sprites.
+    // AI: Helped turn normalized shape math into a Texture2D.
     public static Sprite Triangle(Color color, int size = 64)
     {
         var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
@@ -76,6 +98,9 @@ public static class Art2D
             new Vector2(0.5f, 0.25f), 100f);
     }
 
+    // What: Generate a diamond-shaped sprite.
+    // Human: Chose diamond placeholders for readable fallback enemies/items.
+    // AI: Helped use Manhattan distance to draw the diamond.
     public static Sprite Diamond(Color color, int size = 64)
     {
         var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
@@ -94,8 +119,12 @@ public static class Art2D
             new Vector2(0.5f, 0.5f), 100f);
     }
 
+    // What: Generate a solid square sprite.
+    // Human: Needed simple emergency placeholders for runtime-created objects.
+    // AI: Helped keep the square helper minimal and reusable.
     public static Sprite Square(Color color, int size = 64)
     {
+        // Used for simple emergency placeholders where shape is less important than visibility.
         var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
         var px = new Color[size * size];
         for (int i = 0; i < px.Length; i++) px[i] = color;
@@ -104,8 +133,12 @@ public static class Art2D
             new Vector2(0.5f, 0.5f), 100f);
     }
 
+    // What: Generate a soft rectangular sprite with a shaded edge.
+    // Human: Chose this as fallback panel/backdrop art.
+    // AI: Helped implement the center-to-edge gradient.
     public static Sprite SoftRectangle(Color center, Color edge, int width = 96, int height = 96)
     {
+        // Soft rectangles provide quick panel/backdrop art when a PNG fallback is unavailable.
         var tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
         tex.filterMode = FilterMode.Bilinear;
         for (int y = 0; y < height; y++)
@@ -122,8 +155,13 @@ public static class Art2D
             new Vector2(0.5f, 0.5f), 100f);
     }
 
+    // What: Generate a glowing projectile sprite.
+    // Human: Chose projectile readability and color direction.
+    // AI: Helped shape the glow/core falloff in code.
     public static Sprite Projectile(int width = 96, int height = 32)
     {
+        // The projectile fallback is drawn horizontally. GameBootstrap/Bullet rotate objects so
+        // the sprite can point along the shot direction.
         var tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
         tex.filterMode = FilterMode.Bilinear;
         Vector2 center = new Vector2(width * 0.5f, height * 0.5f);
@@ -144,8 +182,12 @@ public static class Art2D
             new Vector2(0.5f, 0.5f), 100f);
     }
 
+    // What: Generate a key sprite fallback.
+    // Human: Chose the key as the floor objective and picked gold coloring.
+    // AI: Helped draw the bow, shaft, and teeth with pixel conditions.
     public static Sprite Key(int size = 96)
     {
+        // Simple readable key silhouette used only if the external key PNG is missing.
         var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
         tex.filterMode = FilterMode.Bilinear;
         Color gold = new Color(1f, 0.74f, 0.14f, 1f);
@@ -173,8 +215,12 @@ public static class Art2D
             new Vector2(0.5f, 0.5f), 100f);
     }
 
+    // What: Generate an exit gate sprite fallback.
+    // Human: Chose the exit gate as the floor completion target.
+    // AI: Helped draw a readable frame/portal fallback when PNG assets are unavailable.
     public static Sprite ExitGate(int width = 96, int height = 128)
     {
+        // Exit fallback uses a blue portal center to match ExitDoor's unlocked color feedback.
         var tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
         tex.filterMode = FilterMode.Bilinear;
         Color frame = new Color(0.18f, 0.25f, 0.36f, 1f);
@@ -205,6 +251,9 @@ public static class Art2D
             new Vector2(0.5f, 0.5f), 100f);
     }
 
+    // What: Generate an icon for one weapon upgrade card.
+    // Human: Chose the weapon upgrade categories and visual metaphors.
+    // AI: Helped implement compact procedural icon shapes for each enum value.
     public static Sprite WeaponUpgradeIcon(WeaponUpgradeKind upgrade, int size = 96)
     {
         var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
@@ -275,6 +324,9 @@ public static class Art2D
             new Vector2(0.5f, 0.5f), 100f);
     }
 
+    // What: Generate an icon for one passive upgrade card.
+    // Human: Chose passive upgrade categories and visual metaphors.
+    // AI: Helped implement compact procedural icon shapes for each passive enum value.
     public static Sprite PassiveUpgradeIcon(PassiveUpgradeKind upgrade, int size = 96)
     {
         var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
@@ -327,6 +379,9 @@ public static class Art2D
             new Vector2(0.5f, 0.5f), 100f);
     }
 
+    // What: Generate a fallback enemy sprite for any EnemyKind.
+    // Human: Designed the enemy lineup and accepted the fallback visual direction.
+    // AI: Helped translate each enemy identity into simple procedural shapes.
     public static Sprite EnemySprite(EnemyKind kind, int size = 96)
     {
         var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
@@ -454,6 +509,9 @@ public static class Art2D
             new Vector2(0.5f, 0.5f), 100f);
     }
 
+    // What: Test whether a normalized point is inside a capsule between two points.
+    // Human: Needed capsules for limbs, beams, and icon strokes.
+    // AI: Helped implement projection math for reusable shape tests.
     static bool Capsule(float u, float v, float ax, float ay, float bx, float by, float radius)
     {
         Vector2 p = new Vector2(u, v);
@@ -464,6 +522,9 @@ public static class Art2D
         return Vector2.Distance(p, a + ab * t) < radius;
     }
 
+    // What: Pick the body/shadow/accent/eye colors for an enemy kind.
+    // Human: Chose enemy color identities.
+    // AI: Helped centralize palette output for procedural fallback sprites.
     static void EnemyPalette(EnemyKind kind, out Color body, out Color shade, out Color accent, out Color eye)
     {
         eye = new Color(0.07f, 0.06f, 0.09f, 1f);
@@ -547,6 +608,9 @@ public static class Art2D
         }
     }
 
+    // What: Test whether a normalized point lies inside an ellipse.
+    // Human: Used ellipses for bodies, eyes, and soft shapes.
+    // AI: Helped keep the equation small and reusable.
     static bool Ellipse(float u, float v, float cx, float cy, float rx, float ry)
     {
         float x = (u - cx) / rx;
@@ -554,16 +618,25 @@ public static class Art2D
         return x * x + y * y < 1f;
     }
 
+    // What: Test whether a point lies inside a simple rounded box approximation.
+    // Human: Needed readable blocky fallback shapes.
+    // AI: Helped provide a cheap shape test for procedural icons/enemies.
     static bool RoundedBox(float u, float v, float cx, float cy, float hx, float hy)
     {
         return Mathf.Abs(u - cx) < hx && Mathf.Abs(v - cy) < hy;
     }
 
+    // What: Test whether a point is inside either eye of a two-eye pair.
+    // Human: Chose eye placement to make enemy sprites readable.
+    // AI: Helped reuse Ellipse for both eyes.
     static bool EyePair(float u, float v, float ax, float ay, float bx, float by, float r)
     {
         return Ellipse(u, v, ax, ay, r, r * 1.2f) || Ellipse(u, v, bx, by, r, r * 1.2f);
     }
 
+    // What: Test whether a point is inside a simple five-point star radius.
+    // Human: Used stars for magic/XP/impact visual language.
+    // AI: Helped implement the polar-coordinate star shape.
     static bool Star(float u, float v, float cx, float cy, float radius)
     {
         float angle = Mathf.Atan2(v - cy, u - cx);
@@ -572,6 +645,9 @@ public static class Art2D
         return distance < edge;
     }
 
+    // What: Test whether a point is inside a right-pointing triangle.
+    // Human: Used triangles for wings, arrows, horns, and icon details.
+    // AI: Helped keep triangle tests normalized and reusable.
     static bool TriangleRight(float u, float v, float cx, float cy, float width, float height)
     {
         float x = (u - cx) / width;
@@ -579,11 +655,17 @@ public static class Art2D
         return x >= -0.5f && x <= 0.5f && y <= x + 0.5f;
     }
 
+    // What: Test whether a point is inside a left-pointing triangle.
+    // Human: Needed mirrored triangle details for symmetric sprites.
+    // AI: Helped implement this by mirroring TriangleRight.
     static bool TriangleLeft(float u, float v, float cx, float cy, float width, float height)
     {
         return TriangleRight(1f - u, v, 1f - cx, cy, width, height);
     }
 
+    // What: Test whether a point is inside an upward triangle.
+    // Human: Used upward triangles for crowns, horns, and arrows.
+    // AI: Helped write the normalized triangle inequality.
     static bool TriangleUp(float u, float v, float cx, float cy, float width, float height)
     {
         float y = (v - cy) / height;
@@ -591,6 +673,9 @@ public static class Art2D
         return y >= -0.5f && y <= 0.5f && x <= y + 0.5f;
     }
 
+    // What: Test whether a point is inside a downward triangle.
+    // Human: Used downward triangles for tails, cloaks, and arrows.
+    // AI: Helped mirror the upward triangle formula.
     static bool TriangleDown(float u, float v, float cx, float cy, float width, float height)
     {
         float y = (cy - v) / height;
@@ -599,6 +684,9 @@ public static class Art2D
     }
 
     // ───────────────────────── Audio ─────────────────────────
+    // What: Generate a decaying sine-wave audio clip.
+    // Human: Chose synthetic tones as fallback UI/gameplay sounds.
+    // AI: Helped build AudioClip sample data directly.
     public static AudioClip Tone(float freq, float duration, float decay = 14f)
     {
         int sr = 44100;
@@ -615,6 +703,9 @@ public static class Art2D
         return c;
     }
 
+    // What: Generate a short decaying noise audio clip.
+    // Human: Chose noise as fallback hit/impact feedback.
+    // AI: Helped implement the random sample envelope.
     public static AudioClip Noise(float duration, float decay = 10f)
     {
         int sr = 44100;
@@ -631,6 +722,9 @@ public static class Art2D
         return c;
     }
 
+    // What: Generate a small layered chime audio clip.
+    // Human: Chose chimes for positive feedback such as pickup/win fallback.
+    // AI: Helped combine harmonics with a decay envelope.
     public static AudioClip Chime(float baseFreq, float duration)
     {
         int sr = 44100;

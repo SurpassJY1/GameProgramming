@@ -46,18 +46,20 @@ public class GameBootstrap : MonoBehaviour
     const float PixelTilePixelsPerUnit = 16f;
     const float PixelActorPixelsPerUnit = 16f;
     const float KenneyTilePixelsPerUnit = 64f;
+    // Difficulty constants are intentionally centralized so issue-driven balance changes can be
+    // reviewed without hunting through individual enemy setup calls.
     const int BaseEnemyCount = 3;
-    const int MaxEnemyCount = 14;
+    const int MaxEnemyCount = 17;
     const int BossFloorInterval = 3;
-    const int BaseEnemyHealth = 2;
-    const int MaxEnemyHealth = 20;
-    const int MaxBossHealth = 90;
-    const int BaseEnemyXP = 9;
-    const int MaxEnemyXP = 55;
+    const int BaseEnemyHealth = 3;
+    const int MaxEnemyHealth = 80;
+    const int MaxBossHealth = 360;
+    const int BaseEnemyXP = 8;
+    const int MaxEnemyXP = 45;
     const float BasePatrolSpeed = 1.85f;
     const float BaseChaseSpeed = 2.75f;
-    const float MaxPatrolSpeed = 3.8f;
-    const float MaxChaseSpeed = 5.9f;
+    const float MaxPatrolSpeed = 4.4f;
+    const float MaxChaseSpeed = 6.8f;
 
     GameObject currentFloorRoot;
     Transform playerTransform;
@@ -68,6 +70,9 @@ public class GameBootstrap : MonoBehaviour
         public Vector2 position;
         public Vector2 size;
 
+        // What: Store wall position and size for runtime room construction.
+        // Human: Authored the room wall layouts.
+        // AI: Helped package wall data into a simple struct.
         public WallSpec(Vector2 position, Vector2 size)
         {
             this.position = position;
@@ -80,6 +85,9 @@ public class GameBootstrap : MonoBehaviour
         public Vector3 pointA;
         public Vector3 pointB;
 
+        // What: Store two patrol endpoints for one enemy spawn route.
+        // Human: Authored patrol positions for each room variant.
+        // AI: Helped keep patrol data separate from enemy component setup.
         public EnemyPatrolSpec(Vector3 pointA, Vector3 pointB)
         {
             this.pointA = pointA;
@@ -108,6 +116,9 @@ public class GameBootstrap : MonoBehaviour
         public bool summonsAllies;
         public bool elite;
 
+        // What: Store all design/config data for one enemy type.
+        // Human: Chose enemy names, unlock floors, stats, and ability identities.
+        // AI: Helped organize the data table so spawning and scaling share one source.
         public EnemyConfig(
             EnemyKind kind,
             string displayName,
@@ -183,6 +194,9 @@ public class GameBootstrap : MonoBehaviour
         public WallSpec[] walls;
         public EnemyPatrolSpec[] enemies;
 
+        // What: Store one complete room variant: player start, key, exit, walls, and patrols.
+        // Human: Authored the room layouts and objective placement.
+        // AI: Helped model the layout as data instead of scene prefabs.
         public RoomVariant(Vector3 playerStart, Vector2 keyPosition, Vector2 exitPosition, WallSpec[] walls, EnemyPatrolSpec[] enemies)
         {
             this.playerStart = playerStart;
@@ -193,6 +207,9 @@ public class GameBootstrap : MonoBehaviour
         }
     }
 
+    // What: Build the whole playable scene from code when the Unity scene starts.
+    // Human: Owned the decision to use runtime construction and final scene composition.
+    // AI: Helped order setup steps so manager, player, floors, HUD, and menus connect correctly.
     void Awake()
     {
         BuildCamera();
@@ -208,11 +225,17 @@ public class GameBootstrap : MonoBehaviour
         EnsureEventSystem();
     }
 
+    // What: Remove event subscriptions when this bootstrap object is destroyed.
+    // Human: Owned runtime scene lifecycle.
+    // AI: Suggested cleanup so rebuilding the scene does not duplicate floor listeners.
     void OnDestroy()
     {
         if (GameManager.I != null) GameManager.I.OnFloorStarted -= BuildCurrentFloor;
     }
 
+    // What: Create or configure the main orthographic camera and camera helper components.
+    // Human: Chose camera size, background color, and top-down framing.
+    // AI: Helped attach shake and smooth-follow helpers consistently.
     void BuildCamera()
     {
         Camera cam = Camera.main;
@@ -234,6 +257,9 @@ public class GameBootstrap : MonoBehaviour
         if (cam.GetComponent<SmoothCameraFollow>() == null) cam.gameObject.AddComponent<SmoothCameraFollow>();
     }
 
+    // What: Ensure the central GameManager and run event audio bridge exist.
+    // Human: Designed GameManager as the run-state owner.
+    // AI: Helped attach milestone audio without manual scene setup.
     void BuildGameManager()
     {
         if (GameManager.I == null) new GameObject("GameManager").AddComponent<GameManager>();
@@ -245,33 +271,51 @@ public class GameBootstrap : MonoBehaviour
         }
     }
 
+    // What: Try the project-generated sprite first, then a fallback sprite path.
+    // Human: Chose primary and fallback art assets.
+    // AI: Helped make a reusable two-path sprite loader.
     Sprite LoadWorldSprite(string primaryPath, float primaryPixelsPerUnit, string fallbackPath, float fallbackPixelsPerUnit)
     {
         return Art2D.FromPngFile(primaryPath, primaryPixelsPerUnit)
             ?? Art2D.FromPngFile(fallbackPath, fallbackPixelsPerUnit);
     }
 
+    // What: Load one pixel-art sprite from StreamingAssets.
+    // Human: Chose sprite paths and pixels-per-unit values.
+    // AI: Helped keep null/empty path handling safe.
     Sprite LoadPixelSprite(string path, float pixelsPerUnit = PixelActorPixelsPerUnit)
     {
         if (string.IsNullOrEmpty(path)) return null;
         return Art2D.FromPngFile(path, pixelsPerUnit);
     }
 
+    // What: Load a UI sprite using the shared UI pixels-per-unit value.
+    // Human: Chose UI panel/button image assets.
+    // AI: Helped wrap the loader for concise UI construction.
     Sprite LoadUiSprite(string path)
     {
         return Art2D.FromPngFile(path, 100f);
     }
 
+    // What: Load one OGG audio clip from StreamingAssets.
+    // Human: Chose which OGG clips map to game events.
+    // AI: Helped provide a typed wrapper around Art2D.FromAudioFile.
     AudioClip LoadOggClip(string path)
     {
         return Art2D.FromAudioFile(path, AudioType.OGGVORBIS);
     }
 
+    // What: Load one MP3 audio clip from StreamingAssets.
+    // Human: Chose the licensed background music file.
+    // AI: Helped provide a typed wrapper around Art2D.FromAudioFile.
     AudioClip LoadMp3Clip(string path)
     {
         return Art2D.FromAudioFile(path, AudioType.MPEG);
     }
 
+    // What: Create the background music object and configure phase-based volume control.
+    // Human: Chose the music asset and volume levels.
+    // AI: Helped keep music control in RuntimeMusicController.
     void BuildMusicController()
     {
         AudioClip music = LoadMp3Clip(MusicAudioPath);
@@ -291,12 +335,18 @@ public class GameBootstrap : MonoBehaviour
         controller.pausedVolume = 0.08f;
     }
 
+    // What: Rebuild the room that matches GameManager.currentFloor.
+    // Human: Designed floor-based progression.
+    // AI: Helped connect this method to GameManager.OnFloorStarted.
     void BuildCurrentFloor()
     {
         int floor = GameManager.I != null ? Mathf.Max(1, GameManager.I.currentFloor) : 1;
         BuildFloor(floor);
     }
 
+    // What: Destroy the old floor and generate the current room, objective objects, enemies, and boss.
+    // Human: Authored room progression and enemy/boss pacing.
+    // AI: Helped organize the rebuild sequence and comments.
     void BuildFloor(int floor)
     {
         // Floor rebuild flow:
@@ -356,6 +406,9 @@ public class GameBootstrap : MonoBehaviour
         }
     }
 
+    // What: Return the authored room layout selected for this floor.
+    // Human: Authored all room variants, wall positions, and patrol paths.
+    // AI: Helped rotate layouts by floor number for variety without procedural risk.
     RoomVariant GetRoomVariant(int floor)
     {
         // Authored layouts are stored as data instead of Unity prefabs so the design is visible in
@@ -445,6 +498,9 @@ public class GameBootstrap : MonoBehaviour
         }
     }
 
+    // What: Fill the room with visible floor tiles.
+    // Human: Chose tile scale and checker brightness.
+    // AI: Helped generate tiles in loops instead of manual scene placement.
     void BuildTiledFloor(Sprite floorSprite)
     {
         GameObject root = new GameObject("Dungeon Floor");
@@ -466,6 +522,9 @@ public class GameBootstrap : MonoBehaviour
         }
     }
 
+    // What: Add dark backdrop and subtle center glow behind the floor.
+    // Human: Chose the dungeon mood and readability treatment.
+    // AI: Helped create fallback procedural backdrop sprites.
     void BuildAmbientBackdrop()
     {
         GameObject backdrop = new GameObject("Ambient Backdrop");
@@ -485,6 +544,9 @@ public class GameBootstrap : MonoBehaviour
         glow.sortingOrder = -7;
     }
 
+    // What: Build one wall collider and its tiled visual pieces.
+    // Human: Authored wall positions and collision sizes.
+    // AI: Helped tile the visuals so long walls remain crisp.
     void BuildWall(string name, Vector2 pos, Vector2 size, Sprite wallSprite)
     {
         GameObject wall = new GameObject(name);
@@ -526,6 +588,9 @@ public class GameBootstrap : MonoBehaviour
         }
     }
 
+    // What: Create the player object with movement, combat, collider, audio, and camera follow.
+    // Human: Tuned player stats, controls, and feedback.
+    // AI: Helped wire all runtime-created components together.
     GameObject BuildPlayer()
     {
         GameObject go = new GameObject("Player");
@@ -560,6 +625,9 @@ public class GameBootstrap : MonoBehaviour
         return go;
     }
 
+    // What: Create an inactive bullet prefab used by PlayerCombat.
+    // Human: Chose bullet visuals, size, and impact sound.
+    // AI: Helped build a prefab-like object entirely in code.
     GameObject BuildPlayerBulletPrefab()
     {
         GameObject bullet = new GameObject("Player Bullet Prefab");
@@ -586,6 +654,9 @@ public class GameBootstrap : MonoBehaviour
         return bullet;
     }
 
+    // What: Create the floor key pickup at a wall-safe position.
+    // Human: Designed key collection as the first objective.
+    // AI: Helped use safe-position helpers so keys do not spawn inside walls.
     void BuildKey(Vector2 position)
     {
         GameObject key = new GameObject("Gold Key");
@@ -603,6 +674,9 @@ public class GameBootstrap : MonoBehaviour
         key.AddComponent<KeyPickup>();
     }
 
+    // What: Create the exit door at a wall-safe position.
+    // Human: Designed the key-to-exit objective loop.
+    // AI: Helped keep visual door state separate from GameManager exit rules.
     void BuildExit(Vector2 position)
     {
         GameObject exit = new GameObject("Exit Door");
@@ -620,19 +694,31 @@ public class GameBootstrap : MonoBehaviour
         exit.AddComponent<ExitDoor>();
     }
 
+    // What: Calculate how many non-boss enemies spawn on a floor.
+    // Human: Requested higher difficulty and tuned enemy-count pacing.
+    // AI: Helped shape the late-floor pressure formula.
     int EnemyCountForFloor(int floor)
     {
         int floorIndex = Mathf.Max(0, floor - 1);
-        int addedEnemies = Mathf.CeilToInt(floorIndex * 0.75f);
+        // Enemy count ramps faster after floor 5 so early floors remain approachable while mid/late
+        // floors apply the higher pressure requested by the difficulty issue.
+        int lateFloorPressure = Mathf.Max(0, floor - 5);
+        int addedEnemies = Mathf.CeilToInt(floorIndex * 0.95f + lateFloorPressure * 0.35f);
         int count = Mathf.Clamp(BaseEnemyCount + addedEnemies, BaseEnemyCount, MaxEnemyCount);
-        return IsBossFloor(floor) ? Mathf.Max(2, count - 2) : count;
+        return IsBossFloor(floor) ? Mathf.Max(3, count - 1) : count;
     }
 
+    // What: Return whether this floor should include a formal boss encounter.
+    // Human: Chose every third floor as the boss interval.
+    // AI: Helped isolate the rule in one helper.
     bool IsBossFloor(int floor)
     {
         return floor > 0 && floor % BossFloorInterval == 0;
     }
 
+    // What: Pick or offset an enemy patrol path for a spawn index.
+    // Human: Authored base patrol routes.
+    // AI: Helped offset extra enemies so repeated patrols are not identical.
     EnemyPatrolSpec PatrolForEnemy(RoomVariant room, int enemyIndex)
     {
         EnemyPatrolSpec basePatrol = room.enemies[enemyIndex % room.enemies.Length];
@@ -646,6 +732,9 @@ public class GameBootstrap : MonoBehaviour
         return new EnemyPatrolSpec(basePatrol.pointA + offset, basePatrol.pointB - offset);
     }
 
+    // What: Pick a safe central patrol route for a boss encounter.
+    // Human: Wanted bosses to fight near the room center.
+    // AI: Helped keep boss spawn points away from player and walls.
     EnemyPatrolSpec BossPatrolForRoom()
     {
         Vector2 center = ResolveAwayFromPlayer(ResolveFreeCirclePosition(Vector2.zero, 0.9f), 2.4f);
@@ -654,6 +743,9 @@ public class GameBootstrap : MonoBehaviour
         return new EnemyPatrolSpec(new Vector3(left.x, left.y, 0f), new Vector3(right.x, right.y, 0f));
     }
 
+    // What: Choose which boss type appears on this boss floor.
+    // Human: Designed the boss order.
+    // AI: Helped express the repeated order with modulo arithmetic.
     EnemyKind BossKindForFloor(int floor)
     {
         // Student-completed rule: every third floor is a milestone boss fight. AI-assisted support
@@ -670,6 +762,9 @@ public class GameBootstrap : MonoBehaviour
         }
     }
 
+    // What: Return whether an enemy kind is one of the formal boss-capable kinds.
+    // Human: Chose which enemy types can be bosses.
+    // AI: Helped prevent elite enemies from being mistaken for real bosses.
     bool IsBossKind(EnemyKind kind)
     {
         // These kinds can appear in two modes. bossEncounter=true means real boss fight; false
@@ -681,6 +776,9 @@ public class GameBootstrap : MonoBehaviour
             kind == EnemyKind.CrystalTitan;
     }
 
+    // What: Choose the enemy kind for one spawn slot on the current floor.
+    // Human: Designed unlock floors and demo guarantees.
+    // AI: Helped combine guaranteed showcases with deterministic weighted selection.
     EnemyKind ChooseEnemyKindForFloor(int floor, int enemyIndex)
     {
         if (floor <= 1) return EnemyKind.SlimeScout;
@@ -698,6 +796,14 @@ public class GameBootstrap : MonoBehaviour
             for (int i = 0; i < EnemyConfigs.Length; i++)
                 if (!IsBossKind(EnemyConfigs[i].kind) && EnemyConfigs[i].unlockFloor == floor)
                     return EnemyConfigs[i].kind;
+        }
+
+        if (enemyIndex == 1)
+        {
+            // The second spawn slot becomes a deterministic pressure enemy on later floors. This
+            // guarantees the harder mechanics are seen even if weighted selection rolls basic foes.
+            EnemyKind pressureEnemy;
+            if (TryFeaturedPressureEnemyForFloor(floor, out pressureEnemy)) return pressureEnemy;
         }
 
         // After the guaranteed slot, use deterministic weighted selection from unlocked enemies.
@@ -726,10 +832,14 @@ public class GameBootstrap : MonoBehaviour
         return EnemyKind.SlimeScout;
     }
 
+    // What: Calculate weighted-spawn chance for one unlocked enemy type.
+    // Human: Tuned enemy variety and late-floor pressure.
+    // AI: Helped encode weights so advanced threats become more common later.
     int EnemySpawnWeight(EnemyConfig config, int floor)
     {
         int floorsUnlocked = Mathf.Max(0, floor - config.unlockFloor);
         int weight = config.elite ? 1 : Mathf.Max(2, 9 - floorsUnlocked);
+        int latePressure = Mathf.Max(0, floor - 6);
 
         switch (config.kind)
         {
@@ -740,34 +850,71 @@ public class GameBootstrap : MonoBehaviour
                 // Boss types enter the ordinary enemy pool only after their showcase boss fight.
                 // The low weight makes them special, while the guaranteed floor rule above ensures
                 // each one appears soon enough for assessment without requiring a long run.
-                weight = floor >= config.unlockFloor ? 2 + Mathf.Min(2, (floor - config.unlockFloor) / 4) : 0;
+                weight = floor >= config.unlockFloor ? 2 + Mathf.Min(3, (floor - config.unlockFloor) / 3) : 0;
                 break;
             case EnemyKind.SlimeScout:
-                weight = floor <= 3 ? 10 : Mathf.Max(3, 8 - floor / 2);
+                weight = floor <= 3 ? 10 : Mathf.Max(2, 8 - floor / 2);
                 break;
             case EnemyKind.TinyBat:
-                weight = floor <= 5 ? 7 : 5;
+                weight = floor <= 5 ? 7 : Mathf.Max(3, 5 - latePressure / 4);
                 break;
             case EnemyKind.ShieldGuard:
-                weight = 5;
+                weight = 5 + Mathf.Min(2, latePressure / 5);
                 break;
             case EnemyKind.SparkSpitter:
             case EnemyKind.FrostWisp:
             case EnemyKind.DashImp:
-                weight = 4;
+                weight = 4 + Mathf.Min(4, latePressure / 2);
                 break;
             case EnemyKind.HealerFairy:
             case EnemyKind.SummonerShade:
-                weight = 2;
+                weight = 2 + Mathf.Min(3, latePressure / 2);
                 break;
             case EnemyKind.CrystalBrute:
-                weight = floor >= 10 ? 1 + Mathf.Min(2, (floor - 10) / 3) : 0;
+                weight = floor >= 10 ? 2 + Mathf.Min(4, (floor - 10) / 2) : 0;
                 break;
         }
 
         return Mathf.Max(0, weight);
     }
 
+    // What: Guarantee an ability-heavy pressure enemy on later floors.
+    // Human: Requested more challenge when late floors became too easy.
+    // AI: Helped rotate through unlocked pressure enemies deterministically.
+    bool TryFeaturedPressureEnemyForFloor(int floor, out EnemyKind kind)
+    {
+        kind = EnemyKind.SlimeScout;
+        if (floor < 6) return false;
+
+        // Rotate through ability-heavy enemies. If a candidate has not unlocked yet, keep scanning
+        // until an unlocked pressure enemy is found.
+        EnemyKind[] pressureCycle =
+        {
+            EnemyKind.SparkSpitter,
+            EnemyKind.FrostWisp,
+            EnemyKind.DashImp,
+            EnemyKind.HealerFairy,
+            EnemyKind.SummonerShade,
+            EnemyKind.CrystalBrute
+        };
+
+        int start = Mathf.Abs(floor * 37) % pressureCycle.Length;
+        for (int i = 0; i < pressureCycle.Length; i++)
+        {
+            EnemyKind candidate = pressureCycle[(start + i) % pressureCycle.Length];
+            if (GetEnemyConfig(candidate).unlockFloor <= floor)
+            {
+                kind = candidate;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // What: Guarantee that previous bosses return as elite enemies on showcase floors.
+    // Human: Designed the boss-return-as-elite feature for presentation pacing.
+    // AI: Helped keep this guarantee separate from normal spawn weights.
     bool TryFeaturedEliteBossForFloor(int floor, out EnemyKind kind)
     {
         // Student-completed pacing requirement: short presentation time means the "boss becomes
@@ -795,6 +942,9 @@ public class GameBootstrap : MonoBehaviour
         }
     }
 
+    // What: Look up the config row for an enemy kind.
+    // Human: Chose config values and enemy identities.
+    // AI: Helped centralize lookup with a safe default.
     EnemyConfig GetEnemyConfig(EnemyKind kind)
     {
         for (int i = 0; i < EnemyConfigs.Length; i++)
@@ -803,6 +953,9 @@ public class GameBootstrap : MonoBehaviour
         return EnemyConfigs[0];
     }
 
+    // What: Build one enemy or boss object with visuals, physics, stats, and abilities.
+    // Human: Designed enemy stats, sprites, boss/elite behaviour, and progression role.
+    // AI: Helped wire runtime components and scale stats from config.
     void BuildEnemy(string name, EnemyKind kind, Transform player, Vector3 a, Vector3 b, int floor, bool bossEncounter = false)
     {
         // Enemy construction is split into data-driven setup and component setup:
@@ -857,13 +1010,16 @@ public class GameBootstrap : MonoBehaviour
         guard.defeatClip = LoadOggClip(EnemyDefeatAudioPath);
         guard.isBoss = boss;
         ApplyEnemyScaling(guard, floor, config, boss);
-        AddEnemyAbilityIfNeeded(enemy, guard, config);
+        AddEnemyAbilityIfNeeded(enemy, guard, config, floor);
 
         // Only true boss encounters register with GameManager. Elite boss-kind enemies are normal
         // kills: they do not show the bottom boss HP bar and do not lock the exit.
         if (boss && GameManager.I != null) GameManager.I.RegisterBossSpawned(guard);
     }
 
+    // What: Pick a tint for boss-kind enemy sprites.
+    // Human: Chose boss color identities.
+    // AI: Helped keep tint selection in one helper.
     Color BossTint(EnemyKind kind)
     {
         switch (kind)
@@ -876,6 +1032,9 @@ public class GameBootstrap : MonoBehaviour
         }
     }
 
+    // What: Pick a glow color for boss-kind enemies.
+    // Human: Chose boss readability and visual emphasis.
+    // AI: Helped match glow colors to boss identities.
     Color BossGlowColor(EnemyKind kind)
     {
         switch (kind)
@@ -888,7 +1047,10 @@ public class GameBootstrap : MonoBehaviour
         }
     }
 
-    void AddEnemyAbilityIfNeeded(GameObject enemy, Enemy guard, EnemyConfig config)
+    // What: Attach EnemyAbilityController when an enemy kind needs special behaviour.
+    // Human: Designed which enemy types have abilities.
+    // AI: Helped pass the correct sprites, wall mask, player, spawn root, and difficulty scale.
+    void AddEnemyAbilityIfNeeded(GameObject enemy, Enemy guard, EnemyConfig config, int floor)
     {
         bool hasAbility = config.hasRangedAttack || config.hasDashAttack || config.explodesOnProximity ||
             config.healsAllies || config.summonsAllies || config.elite;
@@ -901,6 +1063,7 @@ public class GameBootstrap : MonoBehaviour
         ability.kind = config.kind;
         ability.player = playerTransform;
         ability.wallMask = 1 << WallLayer;
+        ability.difficultyScale = EnemyPressureForFloor(floor);
         ability.projectileSprite = LoadPixelSprite(ProjectileSpritePath, 16f)
             ?? LoadPixelSprite(PixelCuteProjectileSpritePath, 64f)
             ?? Art2D.Projectile(64, 24);
@@ -908,6 +1071,9 @@ public class GameBootstrap : MonoBehaviour
         ability.spawnRoot = currentFloorRoot != null ? currentFloorRoot.transform : null;
     }
 
+    // What: Add a soft oval shadow under an actor or object.
+    // Human: Chose shadows to improve readability on the floor.
+    // AI: Helped implement the reusable child-object shadow helper.
     void AddShadow(Transform parent, Vector2 offset, Vector3 scale, float zOffset)
     {
         GameObject shadow = new GameObject("Shadow");
@@ -919,6 +1085,9 @@ public class GameBootstrap : MonoBehaviour
         sr.sortingOrder = -2;
     }
 
+    // What: Add a soft circular glow behind an important object.
+    // Human: Chose glow colors for keys, exits, and boss-like enemies.
+    // AI: Helped implement a reusable glow child object.
     void AddGlow(Transform parent, Color color, Vector3 scale, int sortingOrder)
     {
         GameObject glow = new GameObject("Glow");
@@ -930,28 +1099,49 @@ public class GameBootstrap : MonoBehaviour
         sr.sortingOrder = sortingOrder;
     }
 
+    // What: Apply floor-scaled health, speed, range, and XP values to an enemy.
+    // Human: Tuned difficulty, boss multipliers, and XP rewards.
+    // AI: Helped centralize the scaling formula and cap late-game values.
     void ApplyEnemyScaling(Enemy enemy, int floor, EnemyConfig config, bool bossEncounter)
     {
         int floorIndex = Mathf.Max(0, floor - 1);
-        // Scaling is intentionally capped to keep endless-floor runs playable in a classroom demo.
-        int healthGrowth = Mathf.FloorToInt(floorIndex * 1.15f) + Mathf.FloorToInt(floorIndex / 3f);
+        float pressure = EnemyPressureForFloor(floor);
+        int lateFloor = Mathf.Max(0, floor - 5);
+        // Scaling is capped, but late floors now add a clearer threat ramp so upgrades do not
+        // trivialize the run after the first few rooms.
+        int healthGrowth = Mathf.FloorToInt(floorIndex * 1.8f) +
+            Mathf.FloorToInt(lateFloor * lateFloor * 0.28f) +
+            Mathf.FloorToInt(lateFloor * 1.35f);
         int healthCap = bossEncounter ? MaxBossHealth : MaxEnemyHealth;
 
         // The same boss config can appear in two strengths. Formal bosses multiply the base config
         // again, while later elite versions use only the lower config multipliers from EnemyConfigs.
         // This directly supports the requested pacing: floor 4 can show the floor 3 boss as an elite
         // without making it as punishing as the real floor 3 boss fight.
-        float healthMultiplier = bossEncounter ? config.healthMultiplier * 2.55f : config.healthMultiplier;
+        float healthMultiplier = bossEncounter ? config.healthMultiplier * 3.45f : config.healthMultiplier;
         enemy.maxHealth = Mathf.Min(healthCap, Mathf.Max(1, Mathf.RoundToInt((BaseEnemyHealth + healthGrowth) * healthMultiplier)));
         enemy.currentHealth = enemy.maxHealth;
-        enemy.patrolSpeed = Mathf.Min(MaxPatrolSpeed, (BasePatrolSpeed + floorIndex * 0.12f) * config.patrolSpeedMultiplier);
-        enemy.chaseSpeed = Mathf.Min(MaxChaseSpeed, (BaseChaseSpeed + floorIndex * 0.2f) * config.chaseSpeedMultiplier);
-        enemy.chaseRange = config.chaseRange;
+        enemy.patrolSpeed = Mathf.Min(MaxPatrolSpeed, (BasePatrolSpeed + floorIndex * 0.14f) * config.patrolSpeedMultiplier * pressure);
+        enemy.chaseSpeed = Mathf.Min(MaxChaseSpeed, (BaseChaseSpeed + floorIndex * 0.24f) * config.chaseSpeedMultiplier * pressure);
+        enemy.chaseRange = Mathf.Min(7.2f, config.chaseRange + Mathf.Max(0f, pressure - 1f) * 1.4f);
         int xpCap = bossEncounter ? MaxEnemyXP * 3 : MaxEnemyXP;
-        float xpMultiplier = bossEncounter ? config.xpMultiplier * 1.9f : config.xpMultiplier;
-        enemy.xpReward = Mathf.Min(xpCap, Mathf.Max(1, Mathf.RoundToInt((BaseEnemyXP + floorIndex * 4) * xpMultiplier)));
+        float xpMultiplier = bossEncounter ? config.xpMultiplier * 1.75f : config.xpMultiplier;
+        enemy.xpReward = Mathf.Min(xpCap, Mathf.Max(1, Mathf.RoundToInt((BaseEnemyXP + floorIndex * 3) * xpMultiplier)));
     }
 
+    // What: Convert a floor number into a shared late-game pressure multiplier.
+    // Human: Requested stronger late-game challenge after enemies were too easy.
+    // AI: Helped cap the scalar so endless floors remain playable.
+    float EnemyPressureForFloor(int floor)
+    {
+        // Shared scalar for late-floor health/speed/range/ability pressure. The cap prevents endless
+        // runs from becoming numerically impossible while still making higher floors feel sharper.
+        return Mathf.Min(2.1f, 1f + Mathf.Max(0, floor - 4) * 0.075f);
+    }
+
+    // What: Move a desired spawn position away from the player if it is too close.
+    // Human: Wanted floor starts to be fair and not spawn enemies on top of the player.
+    // AI: Helped combine distance checks with wall-safe resolution.
     Vector2 ResolveAwayFromPlayer(Vector2 desired, float minDistance)
     {
         if (playerTransform == null) return desired;
@@ -964,6 +1154,9 @@ public class GameBootstrap : MonoBehaviour
         return ResolveFreeCirclePosition(candidate, 0.38f);
     }
 
+    // What: Find a nearby wall-free position for a circular object.
+    // Human: Required keys/enemies/bosses to avoid spawning inside walls.
+    // AI: Helped implement ring-based search around the desired point.
     Vector2 ResolveFreeCirclePosition(Vector2 desired, float radius)
     {
         int mask = 1 << WallLayer;
@@ -983,6 +1176,9 @@ public class GameBootstrap : MonoBehaviour
         return desired;
     }
 
+    // What: Find a nearby wall-free position for a rectangular object.
+    // Human: Required exit doors to avoid overlapping walls.
+    // AI: Helped implement ring-based search using box overlap checks.
     Vector2 ResolveFreeBoxPosition(Vector2 desired, Vector2 size)
     {
         int mask = 1 << WallLayer;
@@ -1002,6 +1198,9 @@ public class GameBootstrap : MonoBehaviour
         return desired;
     }
 
+    // What: Build the full gameplay HUD canvas and wire its references.
+    // Human: Chose HUD stats, layout, colors, and required boss bar.
+    // AI: Helped generate UI elements and assign them to the HUD component.
     void BuildHUD()
     {
         Canvas cv = MakeCanvas("HUDCanvas", 0);
@@ -1028,6 +1227,9 @@ public class GameBootstrap : MonoBehaviour
         MakeText(cv.transform, "ESC = pause", new Vector2(-20, 30), new Vector2(1, 0), 18, TextAnchor.LowerRight, new Color(1, 1, 1, 0.55f));
     }
 
+    // What: Build the bottom boss health bar used during formal boss fights.
+    // Human: Required boss health visibility during boss encounters.
+    // AI: Helped keep boss-bar references grouped on HUD.
     void BuildBossHealthBar(Transform parent, HUD hud)
     {
         GameObject root = new GameObject("BossHealthBar");
@@ -1048,6 +1250,9 @@ public class GameBootstrap : MonoBehaviour
         root.SetActive(false);
     }
 
+    // What: Create a positioned UI Image with optional sprite.
+    // Human: Chose UI panel/accent placement.
+    // AI: Helped factor repeated runtime Image setup into one helper.
     Image MakeUiImage(Transform parent, string name, Vector2 pos, Vector2 anchor, Vector2 size, Color color, string spritePath = null)
     {
         GameObject go = new GameObject(name);
@@ -1062,6 +1267,9 @@ public class GameBootstrap : MonoBehaviour
         return image;
     }
 
+    // What: Create a filled horizontal UI bar and return its fill Image.
+    // Human: Chose XP and boss health bars as readable progress indicators.
+    // AI: Helped configure Unity's filled Image mode in code.
     Image MakeHudBar(Transform parent, Vector2 pos, Vector2 size, Color backgroundColor, Color fillColor)
     {
         GameObject background = new GameObject("XPBar");
@@ -1087,6 +1295,9 @@ public class GameBootstrap : MonoBehaviour
         return fillImage;
     }
 
+    // What: Build the menu canvas, menu pages, upgrade pages, and tutorial prompt.
+    // Human: Chose page content, navigation, and upgrade UI flow.
+    // AI: Helped assemble all generated UI under one canvas.
     void BuildMenusCanvas()
     {
         Canvas cv = MakeCanvas("MenuCanvas", 10);
@@ -1107,6 +1318,9 @@ public class GameBootstrap : MonoBehaviour
         cv.gameObject.AddComponent<TutorialPromptUI>().Build(cv.transform);
     }
 
+    // What: Build the title page with start, instructions, credits, and quit buttons.
+    // Human: Wrote title/subtitle and chose menu actions.
+    // AI: Helped create the page from reusable UI helpers.
     GameObject BuildMainPage(Transform parent, Menus menus)
     {
         GameObject page = MakePagePanel(parent, "MainPage", new Color(0.03f, 0.02f, 0.05f, 0.72f));
@@ -1121,6 +1335,9 @@ public class GameBootstrap : MonoBehaviour
         return page;
     }
 
+    // What: Build a generic information page with title, body, and back button.
+    // Human: Wrote instructions and credits text.
+    // AI: Helped reuse one page builder for both info pages.
     GameObject BuildInfoPage(Transform parent, string title, string body, UnityEngine.Events.UnityAction back)
     {
         GameObject page = MakePagePanel(parent, title + "Page", new Color(0.03f, 0.02f, 0.05f, 0.76f));
@@ -1133,6 +1350,9 @@ public class GameBootstrap : MonoBehaviour
         return page;
     }
 
+    // What: Build the pause menu page.
+    // Human: Chose pause menu options.
+    // AI: Helped wire buttons to Menus callbacks.
     GameObject BuildPausePage(Transform parent, Menus menus)
     {
         GameObject page = MakePagePanel(parent, "PausePage", new Color(0.03f, 0.02f, 0.05f, 0.76f));
@@ -1145,6 +1365,9 @@ public class GameBootstrap : MonoBehaviour
         return page;
     }
 
+    // What: Build a win or game-over page and return its result Text reference.
+    // Human: Chose end-page titles and retry/home actions.
+    // AI: Helped use one builder for both endings.
     GameObject BuildEndPage(Transform parent, Menus menus, string title, Color titleColor, out Text resultText)
     {
         GameObject page = MakePagePanel(parent, title + "Page", new Color(0.03f, 0.02f, 0.05f, 0.8f));
@@ -1158,6 +1381,9 @@ public class GameBootstrap : MonoBehaviour
         return page;
     }
 
+    // What: Create a screen-space Canvas with a scaler and raycaster.
+    // Human: Chose runtime UI instead of authored canvas prefabs.
+    // AI: Helped configure scaling for 1920x1080 reference resolution.
     Canvas MakeCanvas(string name, int sortOrder)
     {
         GameObject cv = new GameObject(name);
@@ -1171,6 +1397,9 @@ public class GameBootstrap : MonoBehaviour
         return canvas;
     }
 
+    // What: Create a full-screen page root with a colored background Image.
+    // Human: Chose overlay colors for menus and end screens.
+    // AI: Helped factor repeated page setup into one helper.
     GameObject MakePagePanel(Transform parent, string name, Color bg)
     {
         GameObject panel = new GameObject(name);
@@ -1184,6 +1413,9 @@ public class GameBootstrap : MonoBehaviour
         return panel;
     }
 
+    // What: Create a runtime Text object with common font, anchor, size, and color setup.
+    // Human: Wrote all visible UI copy and chose text styling.
+    // AI: Helped centralize Text setup so UI code is easier to read.
     Text MakeText(Transform parent, string content, Vector2 pos, Vector2 anchor, int size, TextAnchor align, Color color)
     {
         GameObject go = new GameObject("Text");
@@ -1203,6 +1435,9 @@ public class GameBootstrap : MonoBehaviour
         return text;
     }
 
+    // What: Create a runtime Button with background, accent line, label, and click action.
+    // Human: Chose button labels, positions, and navigation flow.
+    // AI: Helped configure Unity Button colors and child label setup in code.
     Button MakeButton(Transform parent, string label, Vector2 pos, UnityEngine.Events.UnityAction onClick)
     {
         GameObject go = new GameObject("Btn_" + label);
@@ -1240,6 +1475,9 @@ public class GameBootstrap : MonoBehaviour
         return button;
     }
 
+    // What: Ensure Unity's UI event system exists so generated buttons can receive clicks.
+    // Human: Needed menus and upgrade cards to be clickable in an empty generated scene.
+    // AI: Helped add EventSystem and StandaloneInputModule when missing.
     void EnsureEventSystem()
     {
         if (Object.FindFirstObjectByType<EventSystem>() != null) return;
@@ -1249,6 +1487,14 @@ public class GameBootstrap : MonoBehaviour
     }
 }
 
+/// Runtime music volume controller. The AudioSource is built by GameBootstrap, then this component
+/// adjusts volume based on GameManager's current phase.
+///
+/// Authorship note:
+/// - Student-owned implementation: music choice, menu/gameplay/pause volume targets, and final
+///   integration into the generated scene.
+/// - AI-assisted support: event-driven organization suggestions and comments explaining why music
+///   follows GameManager phases instead of each UI page setting volume independently.
 public class RuntimeMusicController : MonoBehaviour
 {
     public AudioSource source;
@@ -1256,22 +1502,34 @@ public class RuntimeMusicController : MonoBehaviour
     public float playingVolume = 0.24f;
     public float pausedVolume = 0.08f;
 
+    // What: Subscribe music volume control to GameManager and start the music loop.
+    // Human: Chose background music and phase volumes.
+    // AI: Helped keep music continuous across phase changes.
     void Start()
     {
+        // The clip starts in menus and continues across phase changes. Only volume changes, which
+        // avoids restarting the loop each time the player pauses or levels up.
         if (GameManager.I != null) GameManager.I.OnStateChanged += SyncToPhase;
         if (source != null && source.clip != null && !source.isPlaying) source.Play();
         SyncToPhase();
     }
 
+    // What: Unsubscribe the music controller from GameManager events.
+    // Human: Owned runtime object lifecycle.
+    // AI: Suggested cleanup to avoid duplicate callbacks.
     void OnDestroy()
     {
         if (GameManager.I != null) GameManager.I.OnStateChanged -= SyncToPhase;
     }
 
+    // What: Adjust music volume based on menu, playing, paused, or upgrade phase.
+    // Human: Tuned the volume levels for gameplay and UI reading.
+    // AI: Helped implement phase-based volume ducking.
     void SyncToPhase()
     {
         if (source == null || GameManager.I == null) return;
 
+        // Playing is loudest; paused/upgrade phases duck the track so UI feedback is easier to hear.
         switch (GameManager.I.phase)
         {
             case GameManager.Phase.Playing:
@@ -1294,6 +1552,12 @@ public class RuntimeMusicController : MonoBehaviour
     }
 }
 
+/// Small event-audio bridge for run milestones such as clearing a floor or ending the run.
+///
+/// Authorship note:
+/// - Student-owned implementation: milestone sound choices and final volume tuning.
+/// - AI-assisted support: event subscription review and comments explaining why this audio is kept
+///   separate from menu button clicks and weapon sounds.
 public class RunEventAudio : MonoBehaviour
 {
     public AudioClip floorClearedClip;
@@ -1301,20 +1565,31 @@ public class RunEventAudio : MonoBehaviour
 
     AudioSource source;
 
+    // What: Create the AudioSource used for run milestone sounds.
+    // Human: Chose milestone sound behaviour.
+    // AI: Helped keep this audio source separate from menu/music sources.
     void Awake()
     {
         source = gameObject.AddComponent<AudioSource>();
         source.playOnAwake = false;
     }
 
+    // What: Subscribe run milestone audio to GameManager events.
+    // Human: Chose floor-clear and run-end sounds.
+    // AI: Helped use events so gameplay code does not play these sounds directly.
     void Start()
     {
         if (GameManager.I == null) return;
 
+        // Subscribe to high-level run events so gameplay scripts do not need direct audio source
+        // references for these global sounds.
         GameManager.I.OnFloorCleared += PlayFloorCleared;
         GameManager.I.OnRunEnded += PlayRunEnded;
     }
 
+    // What: Remove run milestone audio event subscriptions.
+    // Human: Owned generated object lifecycle.
+    // AI: Suggested cleanup for safe scene rebuilds.
     void OnDestroy()
     {
         if (GameManager.I == null) return;
@@ -1323,16 +1598,25 @@ public class RunEventAudio : MonoBehaviour
         GameManager.I.OnRunEnded -= PlayRunEnded;
     }
 
+    // What: Play the configured floor-clear sound.
+    // Human: Chose the floor-clear feedback moment.
+    // AI: Helped wrap playback in a named method for event subscription.
     void PlayFloorCleared()
     {
         Play(floorClearedClip, 0.7f);
     }
 
+    // What: Play the configured run-ended sound.
+    // Human: Chose the run-end feedback moment.
+    // AI: Helped wrap playback in a named method for event subscription.
     void PlayRunEnded()
     {
         Play(runEndedClip, 0.55f);
     }
 
+    // What: Play one audio clip if both clip and source are available.
+    // Human: Tuned event sound volumes.
+    // AI: Helped keep playback null-safe.
     void Play(AudioClip clip, float volume)
     {
         if (clip != null && source != null) source.PlayOneShot(clip, volume);
