@@ -24,9 +24,9 @@ public class GameManager : MonoBehaviour
     [Header("Tuning")]
     public int startLives = 3;
     public int startingLevel = 1;
-    public int startingXPToNextLevel = 16;
-    public float xpGrowthMultiplier = 1.22f;
-    public int xpGrowthFlatBonus = 5;
+    public int startingXPToNextLevel = 18;
+    public float xpGrowthMultiplier = 1.36f;
+    public int xpGrowthFlatBonus = 8;
 
     public int lives;
     public bool hasKey;
@@ -70,6 +70,9 @@ public class GameManager : MonoBehaviour
     public event Action OnFloorStarted;
     public event Action OnFloorCleared;
 
+    // What: Establish the singleton instance and remember the original life count.
+    // Human: Chose a single central run-state manager.
+    // AI: Helped keep duplicate GameManager objects from surviving.
     void Awake()
     {
         if (I != null && I != this)
@@ -82,6 +85,9 @@ public class GameManager : MonoBehaviour
         baseStartLives = startLives;
     }
 
+    // What: Tick run time and handle pause input while gameplay is active.
+    // Human: Chose Escape as pause and wanted elapsed time in HUD/end summary.
+    // AI: Helped gate update work by phase.
     void Update()
     {
         if (phase != Phase.Playing) return;
@@ -91,6 +97,9 @@ public class GameManager : MonoBehaviour
         OnStateChanged?.Invoke();
     }
 
+    // What: Start or restart a full run from floor 1 with clean run-scoped state.
+    // Human: Designed the run reset rules and starting values.
+    // AI: Helped order events so listeners reset before the first floor rebuild.
     public void StartGame()
     {
         // A run reset is stronger than a floor reset: it clears all run-scoped upgrades, XP,
@@ -109,6 +118,9 @@ public class GameManager : MonoBehaviour
         OnStateChanged?.Invoke();
     }
 
+    // What: Record that the current floor key has been collected.
+    // Human: Chose key collection as the main floor objective.
+    // AI: Helped keep objective text and state together in GameManager.
     public void CollectKey()
     {
         if (phase != Phase.Playing || hasKey) return;
@@ -118,6 +130,9 @@ public class GameManager : MonoBehaviour
         OnStateChanged?.Invoke();
     }
 
+    // What: Validate exit rules and either explain why blocked or begin passive upgrade selection.
+    // Human: Designed key-first and boss-defeat-before-exit rules.
+    // AI: Helped centralize exit feedback so Player and ExitDoor stay simple.
     public void TryExit()
     {
         if (phase != Phase.Playing) return;
@@ -144,6 +159,9 @@ public class GameManager : MonoBehaviour
         BeginPassiveUpgrade();
     }
 
+    // What: Remove one life, update objective text, and end the run if lives reach zero.
+    // Human: Tuned lives and game-over behaviour.
+    // AI: Helped keep all life-loss state changes in one method.
     public void PlayerHit()
     {
         if (phase != Phase.Playing) return;
@@ -163,14 +181,21 @@ public class GameManager : MonoBehaviour
         OnStateChanged?.Invoke();
     }
 
+    // What: Count a defeated enemy and award XP after passive XP bonuses.
+    // Human: Chose enemy XP rewards and progression pacing.
+    // AI: Helped apply XP bonus at reward time.
     public void RegisterEnemyDefeated(int xpReward)
     {
         if (phase != Phase.Playing) return;
 
+        // XP bonus is applied at reward time so enemies can keep simple per-type XP values.
         enemiesDefeated++;
         AddXP(Mathf.RoundToInt(xpReward * XPBonusMultiplier()));
     }
 
+    // What: Mark a true boss encounter as alive and seal the exit.
+    // Human: Designed boss floors and boss health bar requirement.
+    // AI: Helped distinguish true bosses from elite boss-kind enemies.
     public void RegisterBossSpawned(Enemy boss)
     {
         // Called only for true boss encounters, not for later elite versions of the same boss types.
@@ -181,6 +206,9 @@ public class GameManager : MonoBehaviour
         OnStateChanged?.Invoke();
     }
 
+    // What: Clear boss state after a true boss is defeated.
+    // Human: Chose boss defeat as the condition that unseals boss-floor exits.
+    // AI: Helped update objective text based on whether the key is already collected.
     public void RegisterBossDefeated()
     {
         if (!bossAliveThisFloor) return;
@@ -195,16 +223,24 @@ public class GameManager : MonoBehaviour
         OnStateChanged?.Invoke();
     }
 
+    // What: Add XP and pause for a weapon upgrade if the next threshold is reached.
+    // Human: Designed mid-floor weapon level-ups.
+    // AI: Helped support chained level-ups safely after upgrade selection.
     public void AddXP(int amount)
     {
         if (phase != Phase.Playing || amount <= 0) return;
 
         currentXP += amount;
+        // One level-up is processed at a time. If currentXP still exceeds the new threshold after
+        // choosing an upgrade, ChooseUpgrade immediately opens another level-up screen.
         // Level-ups interrupt gameplay so the upgrade UI can be read and selected safely.
         if (currentXP >= xpToNextLevel) BeginLevelUp();
         else OnStateChanged?.Invoke();
     }
 
+    // What: Apply the selected weapon upgrade and resume gameplay or open another level-up.
+    // Human: Chose one weapon card per level-up.
+    // AI: Helped handle leftover XP that can trigger another level immediately.
     public void ChooseUpgrade(WeaponUpgradeKind upgrade)
     {
         if (phase != Phase.LevelUp) return;
@@ -224,6 +260,9 @@ public class GameManager : MonoBehaviour
         OnStateChanged?.Invoke();
     }
 
+    // What: Build a short HUD/end-screen summary of selected weapon upgrades.
+    // Human: Chose summary labels and which upgrades to show.
+    // AI: Helped use a reusable AppendUpgradeSummary helper.
     public string GetWeaponBuildSummary()
     {
         string summary = AppendUpgradeSummary("", "Multi", extraProjectileLevel);
@@ -236,6 +275,9 @@ public class GameManager : MonoBehaviour
         return string.IsNullOrEmpty(summary) ? "Basic Shot" : summary;
     }
 
+    // What: Apply the selected passive upgrade and advance to the next floor.
+    // Human: Designed passive rewards as between-floor choices.
+    // AI: Helped sequence register/apply/start-next-floor consistently.
     public void ChoosePassiveUpgrade(PassiveUpgradeKind upgrade)
     {
         if (phase != Phase.PassiveUpgrade) return;
@@ -247,6 +289,9 @@ public class GameManager : MonoBehaviour
         StartNextFloor();
     }
 
+    // What: Build a short HUD/end-screen summary of selected passive upgrades.
+    // Human: Chose passive summary labels.
+    // AI: Helped reuse the summary helper.
     public string GetPassiveBuildSummary()
     {
         string summary = AppendUpgradeSummary("", "Life", maxLivesUpLevel);
@@ -256,11 +301,17 @@ public class GameManager : MonoBehaviour
         return string.IsNullOrEmpty(summary) ? "None" : summary;
     }
 
+    // What: Return the player-facing passive upgrade name for UI cards.
+    // Human: Wrote final passive names.
+    // AI: Helped expose a public wrapper for UI code.
     public string GetPassiveUpgradeDisplayName(PassiveUpgradeKind upgrade)
     {
         return PassiveUpgradeDisplayName(upgrade);
     }
 
+    // What: Return the passive upgrade description shown on cards.
+    // Human: Wrote final player-facing descriptions.
+    // AI: Helped keep descriptions centralized.
     public string GetPassiveUpgradeDescription(PassiveUpgradeKind upgrade)
     {
         switch (upgrade)
@@ -278,6 +329,9 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // What: Return the current level count for one passive upgrade.
+    // Human: Chose to show current level on upgrade cards.
+    // AI: Helped route UI level text through GameManager.
     public int GetPassiveUpgradeLevel(PassiveUpgradeKind upgrade)
     {
         switch (upgrade)
@@ -290,6 +344,9 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // What: Pause active gameplay and freeze time.
+    // Human: Chose pause behaviour.
+    // AI: Helped keep phase/timeScale changes together.
     public void Pause()
     {
         if (phase != Phase.Playing) return;
@@ -298,6 +355,9 @@ public class GameManager : MonoBehaviour
         OnStateChanged?.Invoke();
     }
 
+    // What: Resume gameplay from the pause phase.
+    // Human: Chose resume flow from the pause menu.
+    // AI: Helped restore timeScale and notify UI listeners.
     public void Resume()
     {
         if (phase != Phase.Paused) return;
@@ -306,6 +366,9 @@ public class GameManager : MonoBehaviour
         OnStateChanged?.Invoke();
     }
 
+    // What: Return to the title menu and clear run progress.
+    // Human: Chose home-menu reset behaviour.
+    // AI: Helped reuse ResetRunProgress for predictable cleanup.
     public void ReturnToMenu()
     {
         phase = Phase.Menu;
@@ -314,6 +377,9 @@ public class GameManager : MonoBehaviour
         OnStateChanged?.Invoke();
     }
 
+    // What: Clear every run-scoped counter, upgrade level, cache, boss flag, and XP value.
+    // Human: Defined which values reset between runs.
+    // AI: Helped list all state fields so restart is deterministic.
     void ResetRunProgress()
     {
         // These values are intentionally stored in GameManager rather than scattered through UI,
@@ -344,6 +410,9 @@ public class GameManager : MonoBehaviour
         player = null;
     }
 
+    // What: Spend the current XP threshold and open the weapon upgrade UI.
+    // Human: Designed weapon upgrades as paused choices.
+    // AI: Helped calculate the next threshold immediately after leveling.
     void BeginLevelUp()
     {
         // Weapon upgrades are XP-based and can happen mid-floor. Gameplay pauses so the player can
@@ -358,6 +427,9 @@ public class GameManager : MonoBehaviour
         OnStateChanged?.Invoke();
     }
 
+    // What: Mark the floor cleared and open the passive upgrade UI.
+    // Human: Designed passive upgrades as floor-clear rewards.
+    // AI: Helped fire floor-clear events before showing the passive cards.
     void BeginPassiveUpgrade()
     {
         // Passive upgrades are floor-clear rewards. This separates moment-to-moment combat growth
@@ -372,6 +444,9 @@ public class GameManager : MonoBehaviour
         OnStateChanged?.Invoke();
     }
 
+    // What: Advance the floor number and notify the scene builder to generate the next room.
+    // Human: Designed endless floor progression.
+    // AI: Helped reset key and boss state during floor transition.
     void StartNextFloor()
     {
         // A new floor keeps run upgrades and lives, but resets the floor key objective.
@@ -386,6 +461,9 @@ public class GameManager : MonoBehaviour
         OnStateChanged?.Invoke();
     }
 
+    // What: Build the objective text for the current floor.
+    // Human: Wrote player-facing objective messages.
+    // AI: Helped keep boss-floor wording tied to BossFloorInterval.
     string FloorObjective()
     {
         if (currentFloor <= 1) return "Floor 1: Find the key, then enter the exit.";
@@ -393,11 +471,17 @@ public class GameManager : MonoBehaviour
         return "Floor " + currentFloor + ": Find the key, survive, and keep going.";
     }
 
+    // What: Decide whether tutorial prompts should still be shown for this player profile.
+    // Human: Chose to stop prompts after a few successful first-floor clears.
+    // AI: Helped store the count in PlayerPrefs.
     public bool ShouldShowTutorialPrompts()
     {
         return PlayerPrefs.GetInt(TutorialSuccessfulRunsKey, 0) < 3;
     }
 
+    // What: Count one successful tutorial run when the player clears floor 1.
+    // Human: Defined floor 1 clear as tutorial success.
+    // AI: Helped cap and persist the counter safely.
     void RecordTutorialSuccessIfNeeded()
     {
         if (countedTutorialSuccessThisRun || currentFloor != 1) return;
@@ -408,6 +492,9 @@ public class GameManager : MonoBehaviour
         PlayerPrefs.Save();
     }
 
+    // What: Calculate the XP threshold for the next player level.
+    // Human: Tuned XP growth values for combat pacing.
+    // AI: Helped combine multiplicative and flat growth.
     int CalculateXPToNextLevel(int level)
     {
         float scaled = startingXPToNextLevel * Mathf.Pow(Mathf.Max(1f, xpGrowthMultiplier), Mathf.Max(0, level - startingLevel));
@@ -415,11 +502,17 @@ public class GameManager : MonoBehaviour
         return Mathf.Max(1, Mathf.RoundToInt(scaled) + flatBonus);
     }
 
+    // What: Return the player-facing weapon upgrade name for UI cards.
+    // Human: Wrote final weapon names.
+    // AI: Helped expose display names through GameManager.
     public string GetWeaponUpgradeDisplayName(WeaponUpgradeKind upgrade)
     {
         return UpgradeDisplayName(upgrade);
     }
 
+    // What: Return the weapon upgrade description shown on cards.
+    // Human: Wrote final upgrade descriptions.
+    // AI: Helped keep UI copy centralized.
     public string GetWeaponUpgradeDescription(WeaponUpgradeKind upgrade)
     {
         switch (upgrade)
@@ -443,6 +536,9 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // What: Return the current level count for one weapon upgrade.
+    // Human: Chose to show current weapon level on cards.
+    // AI: Helped avoid UI reading PlayerCombat internals.
     public int GetWeaponUpgradeLevel(WeaponUpgradeKind upgrade)
     {
         switch (upgrade)
@@ -458,6 +554,9 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // What: Convert a weapon enum value into display text.
+    // Human: Chose the names players see.
+    // AI: Helped keep enum-to-text conversion in one switch.
     string UpgradeDisplayName(WeaponUpgradeKind upgrade)
     {
         switch (upgrade)
@@ -473,8 +572,13 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // What: Increment the stored level counter for one chosen weapon upgrade.
+    // Human: Decided upgrade levels should appear in HUD/end summary.
+    // AI: Helped separate counters from the actual PlayerCombat stat changes.
     void RegisterWeaponUpgrade(WeaponUpgradeKind upgrade)
     {
+        // These counters drive HUD/build summaries and card "current level" text. PlayerCombat owns
+        // the actual weapon stat changes.
         switch (upgrade)
         {
             case WeaponUpgradeKind.ExtraProjectile:
@@ -501,12 +605,20 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // What: Find PlayerCombat and tell it to apply the selected weapon upgrade.
+    // Human: Designed combat upgrades to live on PlayerCombat.
+    // AI: Helped make lookup lazy because objects are created at runtime.
     void ApplyWeaponUpgrade(WeaponUpgradeKind upgrade)
     {
+        // PlayerCombat may not be cached yet because the runtime scene is generated in Awake/Start
+        // order. GetPlayerCombat handles the lookup lazily.
         PlayerCombat combat = GetPlayerCombat();
         if (combat != null) combat.ApplyUpgrade(upgrade);
     }
 
+    // What: Find and cache the active PlayerCombat component.
+    // Human: Chose a single player combat component.
+    // AI: Helped cache the lookup while allowing runtime object creation.
     PlayerCombat GetPlayerCombat()
     {
         if (playerCombat != null) return playerCombat;
@@ -515,6 +627,9 @@ public class GameManager : MonoBehaviour
         return playerCombat;
     }
 
+    // What: Find and cache the active Player component.
+    // Human: Chose a single player controller.
+    // AI: Helped use lazy lookup for generated scene order.
     Player GetPlayer()
     {
         if (player != null) return player;
@@ -523,6 +638,9 @@ public class GameManager : MonoBehaviour
         return player;
     }
 
+    // What: Increment the stored level counter for one chosen passive upgrade.
+    // Human: Decided passive levels should appear in HUD/end summary.
+    // AI: Helped keep counters parallel to weapon upgrade counters.
     void RegisterPassiveUpgrade(PassiveUpgradeKind upgrade)
     {
         switch (upgrade)
@@ -542,8 +660,14 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // What: Apply the gameplay effect for one passive upgrade.
+    // Human: Designed passive effects and balance values.
+    // AI: Helped split effects across GameManager, Player, and PlayerCombat.
     void ApplyPassiveUpgrade(PassiveUpgradeKind upgrade)
     {
+        // Passive upgrades are split between GameManager state and player/combat components. This
+        // keeps permanent run stats such as lives here while movement/fire-rate changes stay on the
+        // components that use them.
         switch (upgrade)
         {
             case PassiveUpgradeKind.MaxLivesUp:
@@ -556,18 +680,24 @@ public class GameManager : MonoBehaviour
                 break;
             case PassiveUpgradeKind.FireCooldownBonus:
                 PlayerCombat combat = GetPlayerCombat();
-                if (combat != null) combat.ApplyFireCooldownBonus(0.86f);
+                if (combat != null) combat.ApplyFireCooldownBonus(0.91f);
                 break;
             case PassiveUpgradeKind.XPBonus:
                 break;
         }
     }
 
+    // What: Convert XP bonus passive level into a reward multiplier.
+    // Human: Tuned XP bonus strength.
+    // AI: Helped isolate the formula in one helper.
     float XPBonusMultiplier()
     {
         return 1f + xpBonusLevel * 0.25f;
     }
 
+    // What: Append one leveled upgrade label to a slash-separated summary string.
+    // Human: Chose compact build summaries for HUD/end screens.
+    // AI: Helped avoid repeated string-building logic.
     string AppendUpgradeSummary(string summary, string label, int level)
     {
         if (level <= 0) return summary;
@@ -576,6 +706,9 @@ public class GameManager : MonoBehaviour
         return string.IsNullOrEmpty(summary) ? item : summary + " / " + item;
     }
 
+    // What: Convert a passive enum value into display text.
+    // Human: Chose the passive names players see.
+    // AI: Helped keep enum-to-text conversion in one switch.
     string PassiveUpgradeDisplayName(PassiveUpgradeKind upgrade)
     {
         switch (upgrade)
@@ -591,6 +724,11 @@ public class GameManager : MonoBehaviour
 }
 
 /// Run-scoped weapon upgrade choices offered when the player levels up.
+///
+/// Authorship note:
+/// - Student-owned design: upgrade categories, names, and how they change the combat build.
+/// - AI-assisted support: enum organization and comments so UI, GameManager, and PlayerCombat use
+///   the same strongly typed upgrade list.
 public enum WeaponUpgradeKind
 {
     ExtraProjectile,
@@ -603,6 +741,11 @@ public enum WeaponUpgradeKind
 }
 
 /// Run-scoped passive upgrades awarded after clearing a small floor.
+///
+/// Authorship note:
+/// - Student-owned design: passive reward categories and floor-clear timing.
+/// - AI-assisted support: enum organization and comments so the passive UI and GameManager share
+///   one source of truth.
 public enum PassiveUpgradeKind
 {
     MaxLivesUp,

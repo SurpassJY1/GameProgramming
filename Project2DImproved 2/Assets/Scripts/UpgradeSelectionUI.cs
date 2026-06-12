@@ -2,6 +2,13 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// Three-card weapon upgrade picker shown when XP triggers a level-up.
+/// It is generated at runtime so the project can rebuild a complete playable UI from code.
+///
+/// Authorship note:
+/// - Student-owned implementation: weapon upgrade list, level-up timing, card text, and final
+///   interaction flow.
+/// - AI-assisted support: layout review, runtime UI organization suggestions, and explanatory
+///   comments for random option selection and card repainting.
 public class UpgradeSelectionUI : MonoBehaviour
 {
     const string UiPanelSpritePath = "generated/pixel-cute-dungeon/selected/ui_panel.png";
@@ -25,8 +32,12 @@ public class UpgradeSelectionUI : MonoBehaviour
     Image[] iconImages = new Image[3];
     WeaponUpgradeKind[] currentOptions = new WeaponUpgradeKind[3];
 
+    // What: Build the full weapon-upgrade overlay under the runtime UI canvas.
+    // Human: Chose the three-card upgrade interaction.
+    // AI: Helped organize generated RectTransforms and cached widget references.
     public void Build(Transform parent)
     {
+        // GameBootstrap calls this after creating the UI canvas. No scene prefab is required.
         root = new GameObject("UpgradeSelectionPage");
         root.transform.SetParent(parent, false);
 
@@ -53,15 +64,22 @@ public class UpgradeSelectionUI : MonoBehaviour
         root.SetActive(false);
     }
 
+    // What: Subscribe to level-up events after GameManager exists.
+    // Human: Decided that XP level-ups pause gameplay.
+    // AI: Helped use events so this UI appears only when needed.
     void Start()
     {
         if (GameManager.I == null) return;
 
+        // Weapon upgrade choices appear when XP crosses the next-level threshold.
         GameManager.I.OnLevelUpAvailable += Show;
         GameManager.I.OnStateChanged += SyncVisibility;
         SyncVisibility();
     }
 
+    // What: Unsubscribe from events when the UI object is destroyed.
+    // Human: Owned scene lifecycle through runtime construction.
+    // AI: Suggested cleanup to avoid stale event handlers.
     void OnDestroy()
     {
         if (GameManager.I == null) return;
@@ -70,15 +88,22 @@ public class UpgradeSelectionUI : MonoBehaviour
         GameManager.I.OnStateChanged -= SyncVisibility;
     }
 
+    // What: Roll options, repaint cards, and show the level-up overlay.
+    // Human: Chose the upgrade list and presentation timing.
+    // AI: Helped keep card rerolling tied to opening the overlay.
     void Show()
     {
         if (GameManager.I == null || GameManager.I.phase != GameManager.Phase.LevelUp) return;
 
+        // Re-roll options every level-up so the player sees a fresh three-card choice.
         PickRandomOptions();
         RepaintCards();
         if (root != null) root.SetActive(true);
     }
 
+    // What: Keep the overlay active only during the LevelUp phase.
+    // Human: Defined phase-based upgrade selection.
+    // AI: Suggested this defensive sync for pause/restart edge cases.
     void SyncVisibility()
     {
         if (root == null || GameManager.I == null) return;
@@ -93,8 +118,12 @@ public class UpgradeSelectionUI : MonoBehaviour
         root.SetActive(shouldShow);
     }
 
+    // What: Select three unique weapon upgrades from the full upgrade pool.
+    // Human: Chose random three-card selection instead of showing every upgrade.
+    // AI: Suggested partial Fisher-Yates shuffling to avoid duplicates.
     void PickRandomOptions()
     {
+        // Partial Fisher-Yates shuffle: selects three unique upgrades from the full pool.
         WeaponUpgradeKind[] pool = new WeaponUpgradeKind[allUpgrades.Length];
         for (int i = 0; i < allUpgrades.Length; i++) pool[i] = allUpgrades[i];
 
@@ -108,11 +137,15 @@ public class UpgradeSelectionUI : MonoBehaviour
         }
     }
 
+    // What: Copy the current upgrade option data into the visible card widgets.
+    // Human: Wrote final upgrade names, descriptions, and icon choices.
+    // AI: Helped centralize display text in GameManager and icons in Art2D.
     void RepaintCards()
     {
         GameManager gm = GameManager.I;
         if (gm == null) return;
 
+        // GameManager owns upgrade labels and levels; this class only renders the current choices.
         for (int i = 0; i < currentOptions.Length; i++)
         {
             WeaponUpgradeKind upgrade = currentOptions[i];
@@ -123,16 +156,24 @@ public class UpgradeSelectionUI : MonoBehaviour
         }
     }
 
+    // What: Apply the selected weapon upgrade and close the overlay.
+    // Human: Chose that one card is selected per level-up.
+    // AI: Helped route upgrade application through GameManager for consistent state.
     void ChooseOption(int index)
     {
         if (GameManager.I == null || GameManager.I.phase != GameManager.Phase.LevelUp) return;
 
+        // Upgrade application resumes gameplay through GameManager after the selection is recorded.
         if (root != null) root.SetActive(false);
         GameManager.I.ChooseUpgrade(currentOptions[index]);
     }
 
+    // What: Construct one clickable upgrade card and cache its child UI references.
+    // Human: Chose card size, colors, and screen layout.
+    // AI: Helped break card creation into a reusable method.
     void BuildCard(int index, Vector2 position)
     {
+        // Build a reusable card shell, then cache child text/image references for RepaintCards.
         GameObject card = new GameObject("UpgradeCard_" + index);
         card.transform.SetParent(root.transform, false);
 
@@ -172,6 +213,9 @@ public class UpgradeSelectionUI : MonoBehaviour
         levelTexts[index].GetComponent<RectTransform>().sizeDelta = new Vector2(250f, 46f);
     }
 
+    // What: Create a Text object with common sizing and font defaults.
+    // Human: Chose the visible UI text content and color style.
+    // AI: Suggested a helper to avoid repeating RectTransform/Text setup.
     Text MakeText(Transform parent, string content, Vector2 position, int size, TextAnchor align, Color color)
     {
         GameObject go = new GameObject("Text");
@@ -193,6 +237,9 @@ public class UpgradeSelectionUI : MonoBehaviour
         return text;
     }
 
+    // What: Create an Image object with common RectTransform setup.
+    // Human: Chose where icons and accents appear on each card.
+    // AI: Suggested a helper to keep runtime UI construction readable.
     Image MakeImage(Transform parent, string name, Vector2 position, Vector2 size, Color color)
     {
         GameObject go = new GameObject(name);

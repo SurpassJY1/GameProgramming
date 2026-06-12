@@ -18,9 +18,10 @@ public class PlayerCombat : MonoBehaviour
     public float bulletLifetime = 1.2f;
     public int extraProjectiles;
     public float spreadAngle = 24f;
-    public float minFireCooldown = 0.075f;
-    public float rapidFireMultiplier = 0.78f;
+    public float minFireCooldown = 0.11f;
+    public float rapidFireMultiplier = 0.84f;
     public int damagePerUpgrade = 1;
+    public int maxDamage = 4;
     public int pierceCount;
     public bool hasBurnShot;
     public bool hasSlowShot;
@@ -50,6 +51,9 @@ public class PlayerCombat : MonoBehaviour
     int baseExplosionDamage;
     Vector2 aimDirection = Vector2.up;
 
+    // What: Cache camera/audio references needed by aiming and shooting.
+    // Human: Chose mouse-aimed combat for the player.
+    // AI: Helped keep component lookup simple for a runtime-built Player object.
     void Awake()
     {
         mainCamera = Camera.main;
@@ -58,6 +62,9 @@ public class PlayerCombat : MonoBehaviour
         audioSrc.playOnAwake = false;
     }
 
+    // What: Store baseline weapon stats and subscribe to run resets.
+    // Human: Tuned the starting weapon values.
+    // AI: Suggested saving base values so restarts reset all upgrades reliably.
     void Start()
     {
         baseFireCooldown = fireCooldown;
@@ -72,11 +79,17 @@ public class PlayerCombat : MonoBehaviour
         ResetForNewRun();
     }
 
+    // What: Unsubscribe from GameManager when this combat component is destroyed.
+    // Human: Owned runtime player lifecycle.
+    // AI: Suggested cleanup for event safety.
     void OnDestroy()
     {
         if (GameManager.I != null) GameManager.I.OnGameStarted -= ResetForNewRun;
     }
 
+    // What: Aim at the mouse, tick cooldown, and fire while the mouse button is held.
+    // Human: Chose hold-to-shoot gameplay.
+    // AI: Helped gate combat by GameManager phase.
     void Update()
     {
         if (GameManager.I == null || GameManager.I.phase != GameManager.Phase.Playing) return;
@@ -87,11 +100,16 @@ public class PlayerCombat : MonoBehaviour
         if (Input.GetMouseButton(0)) TryFire();
     }
 
+    // What: Convert mouse position into a world-space aim direction.
+    // Human: Chose direct mouse aiming and sprite rotation.
+    // AI: Helped document orthographic world conversion.
     void AimAtMouse()
     {
         if (mainCamera == null) mainCamera = Camera.main;
         if (mainCamera == null) return;
 
+        // Mouse position is converted to world space because the game uses a top-down orthographic
+        // camera. The player transform points up along the current aim direction.
         Vector3 mouseWorld = mainCamera.ScreenToWorldPoint(Input.mousePosition);
         mouseWorld.z = transform.position.z;
         Vector2 toMouse = mouseWorld - transform.position;
@@ -101,38 +119,46 @@ public class PlayerCombat : MonoBehaviour
         transform.up = aimDirection;
     }
 
+    // What: Spawn one volley if the fire cooldown has expired.
+    // Human: Tuned the base fire cadence.
+    // AI: Helped set cooldown before spawning to avoid same-frame double fire.
     void TryFire()
     {
         if (cooldownTimer > 0f) return;
 
+        // The cooldown is assigned before spawning bullets so recursive or event-driven calls cannot
+        // fire twice in the same frame.
         cooldownTimer = fireCooldown;
         SpawnBulletVolley();
 
         if (shootClip != null) audioSrc.PlayOneShot(shootClip, 0.45f);
     }
 
+    // What: Apply one selected weapon upgrade to the current combat stats.
+    // Human: Designed the upgrade effects and their balance caps.
+    // AI: Helped organize the switch and document caps that prevent runaway output.
     public void ApplyUpgrade(WeaponUpgradeKind upgrade)
     {
         // Upgrade effects are capped to avoid runaway values during longer floor runs.
         switch (upgrade)
         {
             case WeaponUpgradeKind.ExtraProjectile:
-                extraProjectiles = Mathf.Min(4, extraProjectiles + 2);
+                extraProjectiles = Mathf.Min(2, extraProjectiles + 1);
                 break;
             case WeaponUpgradeKind.RapidFire:
                 fireCooldown = Mathf.Max(minFireCooldown, fireCooldown * rapidFireMultiplier);
                 cooldownTimer = Mathf.Min(cooldownTimer, fireCooldown);
                 break;
             case WeaponUpgradeKind.DamageUp:
-                damage += Mathf.Max(1, damagePerUpgrade);
+                damage = Mathf.Min(maxDamage, damage + Mathf.Max(1, damagePerUpgrade));
                 break;
             case WeaponUpgradeKind.PiercingShot:
-                pierceCount = Mathf.Min(2, pierceCount + 1);
+                pierceCount = Mathf.Min(1, pierceCount + 1);
                 break;
             case WeaponUpgradeKind.BurnShot:
                 hasBurnShot = true;
-                burnDamage = Mathf.Min(4, burnDamage + 1);
-                burnDuration = Mathf.Min(5f, burnDuration + 0.6f);
+                burnDamage = Mathf.Min(2, burnDamage + 1);
+                burnDuration = Mathf.Min(4f, burnDuration + 0.45f);
                 break;
             case WeaponUpgradeKind.SlowShot:
                 hasSlowShot = true;
@@ -141,18 +167,26 @@ public class PlayerCombat : MonoBehaviour
                 break;
             case WeaponUpgradeKind.ExplosiveShot:
                 hasExplosiveShot = true;
-                explosionRadius = Mathf.Min(2.05f, explosionRadius + 0.22f);
-                explosionDamage = Mathf.Min(5, explosionDamage + 1);
+                explosionRadius = Mathf.Min(1.55f, explosionRadius + 0.14f);
+                explosionDamage = Mathf.Min(3, explosionDamage + 1);
                 break;
         }
     }
 
+    // What: Apply a passive fire-rate multiplier while respecting the minimum cooldown.
+    // Human: Chose passive fire-rate as a floor-clear reward.
+    // AI: Helped clamp the multiplier to keep late-game damage from scaling too hard.
     public void ApplyFireCooldownBonus(float multiplier)
     {
-        fireCooldown = Mathf.Max(minFireCooldown, fireCooldown * Mathf.Clamp(multiplier, 0.5f, 1f));
+        // Passive fire-rate bonuses multiply the current cooldown, including previous weapon
+        // upgrades, but still respect the global minimum.
+        fireCooldown = Mathf.Max(minFireCooldown, fireCooldown * Mathf.Clamp(multiplier, 0.74f, 1f));
         cooldownTimer = Mathf.Min(cooldownTimer, fireCooldown);
     }
 
+    // What: Restore all run-scoped weapon values to their baseline.
+    // Human: Required restarts to begin from the same weapon state.
+    // AI: Helped list every upgraded field so no state leaks into a new run.
     void ResetForNewRun()
     {
         // Weapon upgrades are run-scoped. Starting a new run restores the baseline so repeated
@@ -173,6 +207,9 @@ public class PlayerCombat : MonoBehaviour
         cooldownTimer = 0f;
     }
 
+    // What: Spawn either a single bullet or a symmetrical multi-shot volley.
+    // Human: Designed extra projectiles as a weapon upgrade.
+    // AI: Helped compute spread angles around the current aim direction.
     void SpawnBulletVolley()
     {
         int projectileCount = Mathf.Clamp(1 + extraProjectiles, 1, 5);
@@ -193,6 +230,9 @@ public class PlayerCombat : MonoBehaviour
         }
     }
 
+    // What: Create one bullet and copy the current weapon build into it.
+    // Human: Chose bullet speed, lifetime, and upgrade effects.
+    // AI: Helped snapshot stats so existing bullets do not change after later upgrades.
     void SpawnBullet(Vector2 direction)
     {
         Vector3 spawnPosition = transform.position + (Vector3)(direction * muzzleOffset);
@@ -220,6 +260,9 @@ public class PlayerCombat : MonoBehaviour
         }
     }
 
+    // What: Build a minimal bullet if the configured bullet prefab is unavailable.
+    // Human: Wanted the game to remain playable without manual prefab setup.
+    // AI: Helped implement a procedural fallback projectile object.
     GameObject BuildFallbackBullet(Vector3 position, Quaternion rotation)
     {
         GameObject bullet = new GameObject("Player Bullet");

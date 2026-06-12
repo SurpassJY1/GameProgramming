@@ -26,8 +26,13 @@ public class HUD : MonoBehaviour
     public Text bossBarText;
     public GameObject root;
 
+    // What: Subscribe HUD repainting to game events and hide HUD before a run starts.
+    // Human: Chose which run stats should appear on screen.
+    // AI: Helped connect the HUD to GameManager as the single source of truth.
     void Start()
     {
+        // HUD is hidden on the title screen, then shown when a run starts. All visible values come
+        // from GameManager so gameplay scripts do not write directly into UI text fields.
         GameManager.I.OnStateChanged += Repaint;
         GameManager.I.OnGameStarted += () =>
         {
@@ -38,16 +43,26 @@ public class HUD : MonoBehaviour
         if (root != null) root.SetActive(false);
     }
 
+    // What: Repaint during active gameplay so timer and live bars stay current.
+    // Human: Chose a real-time timer and XP bar.
+    // AI: Suggested event repaint plus active-frame repaint for changing values.
     void Update()
     {
+        // Time changes continuously while playing, so repaint during active gameplay even if no
+        // discrete state event fired this frame.
         if (GameManager.I != null && GameManager.I.phase == GameManager.Phase.Playing) Repaint();
     }
 
+    // What: Copy GameManager state into all normal HUD labels and bars.
+    // Human: Selected the HUD fields and final wording.
+    // AI: Helped null-check each field because the UI is generated at runtime.
     void Repaint()
     {
         GameManager gm = GameManager.I;
         if (gm == null) return;
 
+        // Every field is null-checked because GameBootstrap builds the HUD at runtime and individual
+        // labels can be omitted without breaking the rest of the display.
         if (livesText != null) livesText.text = "Lives: " + gm.lives;
         if (floorText != null) floorText.text = "Floor: " + gm.currentFloor;
         if (keyText != null) keyText.text = gm.hasKey ? "Key: Collected" : "Key: Missing";
@@ -62,6 +77,9 @@ public class HUD : MonoBehaviour
         RepaintBossBar(gm);
     }
 
+    // What: Show and update the boss health bar only for true boss encounters.
+    // Human: Required a bottom boss bar for boss floors.
+    // AI: Helped separate formal bosses from later elite boss-kind enemies.
     void RepaintBossBar(GameManager gm)
     {
         // The boss bar is driven by gameplay state, not by floor number. This means it appears only

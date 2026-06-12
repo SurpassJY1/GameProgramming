@@ -1,6 +1,12 @@
 using UnityEngine;
 
 /// Smooth camera follow with clamped dungeon bounds and additive shake offset.
+///
+/// Authorship note:
+/// - Student-owned implementation: top-down camera feel, dungeon-bound framing, and final follow
+///   tuning for the runtime-built rooms.
+/// - AI-assisted support: review suggestions and comments explaining viewport clamping and how
+///   CameraShake is layered on top of the smoothed camera position.
 public class SmoothCameraFollow : MonoBehaviour
 {
     public Transform target;
@@ -10,10 +16,15 @@ public class SmoothCameraFollow : MonoBehaviour
 
     Vector3 velocity;
 
+    // What: Follow the player smoothly, clamp the camera inside dungeon bounds, and add shake.
+    // Human: Tuned camera smoothing and room bounds for the game feel.
+    // AI: Helped explain aspect-ratio clamping and shake layering.
     void LateUpdate()
     {
         if (target == null) return;
 
+        // Convert the orthographic camera size into world-space viewport extents. This makes the
+        // clamp work on different window aspect ratios.
         float halfHeight = Camera.main != null ? Camera.main.orthographicSize : 5.5f;
         float halfWidth = halfHeight * (Screen.width / Mathf.Max(1f, (float)Screen.height));
 
@@ -30,6 +41,8 @@ public class SmoothCameraFollow : MonoBehaviour
         desired.x = Mathf.Clamp(desired.x, minX, maxX);
         desired.y = Mathf.Clamp(desired.y, minY, maxY);
 
+        // SmoothDamp avoids hard camera snapping when the player changes direction. Camera shake is
+        // added after the smoothed position so hit feedback does not disturb the follow velocity.
         Vector3 smooth = Vector3.SmoothDamp(transform.position, desired, ref velocity, smoothTime);
         transform.position = smooth + CameraShake.Offset();
     }
