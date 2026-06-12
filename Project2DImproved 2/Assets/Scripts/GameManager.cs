@@ -50,6 +50,9 @@ public class GameManager : MonoBehaviour
     public int moveSpeedUpLevel;
     public int fireCooldownBonusLevel;
     public int xpBonusLevel;
+    public Vector3 keyObjectivePosition;
+    public Vector3 exitObjectivePosition;
+    public bool objectivePositionsReady;
 
     // Boss state is intentionally kept in GameManager instead of HUD. The gameplay rule is that a
     // formal boss encounter seals the exit, while the HUD only visualizes the same state. Elite
@@ -221,6 +224,34 @@ public class GameManager : MonoBehaviour
             ? "Floor " + currentFloor + ": Boss defeated. Enter the exit."
             : "Floor " + currentFloor + ": Boss defeated. Collect the key.";
         OnStateChanged?.Invoke();
+    }
+
+    public void RegisterFloorObjectivePositions(Vector3 keyPosition, Vector3 exitPosition)
+    {
+        keyObjectivePosition = keyPosition;
+        exitObjectivePosition = exitPosition;
+        objectivePositionsReady = true;
+    }
+
+    public bool TryGetCurrentObjectivePosition(out Vector3 target)
+    {
+        target = Vector3.zero;
+        if (!objectivePositionsReady) return false;
+
+        if (!hasKey)
+        {
+            target = keyObjectivePosition;
+            return true;
+        }
+
+        if (bossAliveThisFloor && activeBoss != null && !activeBoss.IsDead)
+        {
+            target = activeBoss.transform.position;
+            return true;
+        }
+
+        target = exitObjectivePosition;
+        return true;
     }
 
     // What: Add XP and pause for a weapon upgrade if the next threshold is reached.
@@ -404,6 +435,7 @@ public class GameManager : MonoBehaviour
         moveSpeedUpLevel = 0;
         fireCooldownBonusLevel = 0;
         xpBonusLevel = 0;
+        objectivePositionsReady = false;
         bossAliveThisFloor = false;
         activeBoss = null;
         playerCombat = null;
@@ -452,6 +484,7 @@ public class GameManager : MonoBehaviour
         // A new floor keeps run upgrades and lives, but resets the floor key objective.
         currentFloor++;
         hasKey = false;
+        objectivePositionsReady = false;
         bossAliveThisFloor = false;
         activeBoss = null;
         objective = FloorObjective();
