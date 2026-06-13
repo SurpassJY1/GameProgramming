@@ -218,6 +218,7 @@ public class GameBootstrap : MonoBehaviour
         GameObject player = BuildPlayer();
         playerTransform = player.transform;
         playerController = player.GetComponent<Player>();
+        BuildObjectiveDirectionHint(playerTransform);
         if (GameManager.I != null) GameManager.I.OnFloorStarted += BuildCurrentFloor;
         BuildFloor(1);
         BuildHUD();
@@ -383,8 +384,9 @@ public class GameBootstrap : MonoBehaviour
         for (int i = 0; i < room.walls.Length; i++)
             BuildWall("Room Wall " + i, room.walls[i].position, room.walls[i].size, wallSprite);
 
-        BuildKey(room.keyPosition);
-        BuildExit(room.exitPosition);
+        Vector3 keyPosition = BuildKey(room.keyPosition);
+        Vector3 exitPosition = BuildExit(room.exitPosition);
+        if (GameManager.I != null) GameManager.I.RegisterFloorObjectivePositions(keyPosition, exitPosition);
 
         // Later floors add enemies and unlock stronger enemy types, but the same key-to-exit
         // objective remains so the core rule is easy to understand. Every third floor adds a boss
@@ -625,6 +627,23 @@ public class GameBootstrap : MonoBehaviour
         return go;
     }
 
+    // What: Add a small world-space arrow that points toward the next objective.
+    // Human: Wanted first-time players to find the key, exit, and boss quickly in a demo.
+    // AI: Helped keep the hint visual-only so it does not change gameplay rules.
+    void BuildObjectiveDirectionHint(Transform player)
+    {
+        if (player == null) return;
+
+        GameObject hint = new GameObject("Objective Direction Hint");
+        SpriteRenderer sr = hint.AddComponent<SpriteRenderer>();
+        sr.sprite = Art2D.Triangle(new Color(1f, 0.82f, 0.22f, 0.92f), 48);
+        sr.sortingOrder = 8;
+
+        ObjectiveDirectionHint controller = hint.AddComponent<ObjectiveDirectionHint>();
+        controller.player = player;
+        controller.rendererRef = sr;
+    }
+
     // What: Create an inactive bullet prefab used by PlayerCombat.
     // Human: Chose bullet visuals, size, and impact sound.
     // AI: Helped build a prefab-like object entirely in code.
@@ -657,7 +676,7 @@ public class GameBootstrap : MonoBehaviour
     // What: Create the floor key pickup at a wall-safe position.
     // Human: Designed key collection as the first objective.
     // AI: Helped use safe-position helpers so keys do not spawn inside walls.
-    void BuildKey(Vector2 position)
+    Vector3 BuildKey(Vector2 position)
     {
         GameObject key = new GameObject("Gold Key");
         key.transform.SetParent(currentFloorRoot.transform);
@@ -672,12 +691,13 @@ public class GameBootstrap : MonoBehaviour
         col.isTrigger = true;
         col.radius = 0.55f;
         key.AddComponent<KeyPickup>();
+        return key.transform.position;
     }
 
     // What: Create the exit door at a wall-safe position.
     // Human: Designed the key-to-exit objective loop.
     // AI: Helped keep visual door state separate from GameManager exit rules.
-    void BuildExit(Vector2 position)
+    Vector3 BuildExit(Vector2 position)
     {
         GameObject exit = new GameObject("Exit Door");
         exit.transform.SetParent(currentFloorRoot.transform);
@@ -692,6 +712,7 @@ public class GameBootstrap : MonoBehaviour
         col.isTrigger = true;
         col.size = Vector2.one;
         exit.AddComponent<ExitDoor>();
+        return exit.transform.position;
     }
 
     // What: Calculate how many non-boss enemies spawn on a floor.
@@ -1206,17 +1227,18 @@ public class GameBootstrap : MonoBehaviour
         Canvas cv = MakeCanvas("HUDCanvas", 0);
         HUD hud = cv.gameObject.AddComponent<HUD>();
         hud.root = cv.gameObject;
-        MakeUiImage(cv.transform, "HudPanel", new Vector2(14, -14), new Vector2(0, 1), new Vector2(315, 214), new Color(0.04f, 0.05f, 0.08f, 0.74f), UiPanelSpritePath);
-        MakeUiImage(cv.transform, "HudAccent", new Vector2(14, -14), new Vector2(0, 1), new Vector2(4, 214), new Color(0.28f, 0.82f, 1f, 0.8f));
+        MakeUiImage(cv.transform, "HudPanel", new Vector2(14, -14), new Vector2(0, 1), new Vector2(315, 244), new Color(0.04f, 0.05f, 0.08f, 0.74f), UiPanelSpritePath);
+        MakeUiImage(cv.transform, "HudAccent", new Vector2(14, -14), new Vector2(0, 1), new Vector2(4, 244), new Color(0.28f, 0.82f, 1f, 0.8f));
         MakeUiImage(cv.transform, "TimerPanel", new Vector2(-14, -14), new Vector2(1, 1), new Vector2(205, 52), new Color(0.04f, 0.05f, 0.08f, 0.74f), UiPanelSpritePath);
         MakeUiImage(cv.transform, "ObjectivePanel", new Vector2(0, 18), new Vector2(0.5f, 0), new Vector2(700, 48), new Color(0.04f, 0.05f, 0.08f, 0.68f), UiPanelSpritePath);
         hud.floorText = MakeText(cv.transform, "Floor: 1", new Vector2(22, -20), new Vector2(0, 1), 24, TextAnchor.UpperLeft, new Color(0.72f, 0.95f, 1f));
         hud.livesText = MakeText(cv.transform, "Lives: 3", new Vector2(22, -52), new Vector2(0, 1), 21, TextAnchor.UpperLeft, Color.white);
         hud.keyText = MakeText(cv.transform, "Key: Missing", new Vector2(22, -82), new Vector2(0, 1), 20, TextAnchor.UpperLeft, new Color(1f, 0.9f, 0.45f));
         hud.enemiesText = MakeText(cv.transform, "Defeated: 0", new Vector2(22, -112), new Vector2(0, 1), 19, TextAnchor.UpperLeft, new Color(1f, 0.72f, 0.62f));
-        hud.levelText = MakeText(cv.transform, "Level: 1", new Vector2(22, -140), new Vector2(0, 1), 20, TextAnchor.UpperLeft, new Color(0.72f, 0.95f, 1f));
-        hud.xpText = MakeText(cv.transform, "XP: 0 / 20", new Vector2(22, -168), new Vector2(0, 1), 18, TextAnchor.UpperLeft, new Color(0.82f, 0.9f, 1f));
-        hud.xpBarFill = MakeHudBar(cv.transform, new Vector2(22, -194), new Vector2(245, 12), new Color(0.05f, 0.08f, 0.11f, 0.82f), new Color(0.35f, 0.85f, 1f, 0.95f));
+        hud.scoreText = MakeText(cv.transform, "Score: 250", new Vector2(22, -140), new Vector2(0, 1), 20, TextAnchor.UpperLeft, new Color(0.75f, 1f, 0.72f));
+        hud.levelText = MakeText(cv.transform, "Level: 1", new Vector2(22, -168), new Vector2(0, 1), 20, TextAnchor.UpperLeft, new Color(0.72f, 0.95f, 1f));
+        hud.xpText = MakeText(cv.transform, "XP: 0 / 20", new Vector2(22, -196), new Vector2(0, 1), 18, TextAnchor.UpperLeft, new Color(0.82f, 0.9f, 1f));
+        hud.xpBarFill = MakeHudBar(cv.transform, new Vector2(22, -222), new Vector2(245, 12), new Color(0.05f, 0.08f, 0.11f, 0.82f), new Color(0.35f, 0.85f, 1f, 0.95f));
         hud.weaponText = MakeText(cv.transform, "Weapon: Basic Shot", new Vector2(18, 72), new Vector2(0, 0), 18, TextAnchor.LowerLeft, new Color(1f, 0.86f, 0.42f));
         hud.weaponText.GetComponent<RectTransform>().sizeDelta = new Vector2(560, 40);
         hud.passiveText = MakeText(cv.transform, "Passives: None", new Vector2(18, 36), new Vector2(0, 0), 18, TextAnchor.LowerLeft, new Color(0.75f, 1f, 0.72f));
@@ -1327,7 +1349,8 @@ public class GameBootstrap : MonoBehaviour
         MakeUiImage(page.transform, "TitleRuleTop", new Vector2(0, 292), new Vector2(0.5f, 0.5f), new Vector2(760, 4), new Color(0.28f, 0.82f, 1f, 0.68f));
         MakeUiImage(page.transform, "TitleRuleBottom", new Vector2(0, 108), new Vector2(0.5f, 0.5f), new Vector2(760, 4), new Color(1f, 0.72f, 0.18f, 0.7f));
         MakeText(page.transform, "DUNGEON KEY RUN", new Vector2(0, 220), new Vector2(0.5f, 0.5f), 72, TextAnchor.MiddleCenter, new Color(1f, 0.86f, 0.35f));
-        MakeText(page.transform, "Find the key. Avoid the guards. Escape the dungeon.", new Vector2(0, 145), new Vector2(0.5f, 0.5f), 26, TextAnchor.MiddleCenter, Color.white);
+        MakeText(page.transform, "Find the key. Reach deeper floors. Beat your best score.", new Vector2(0, 145), new Vector2(0.5f, 0.5f), 26, TextAnchor.MiddleCenter, Color.white);
+        menus.mainRecordText = MakeText(page.transform, GameManager.I != null ? GameManager.I.GetBestRecordSummary() : "Best Score: none yet", new Vector2(0, 92), new Vector2(0.5f, 0.5f), 22, TextAnchor.MiddleCenter, new Color(0.72f, 0.95f, 1f));
         MakeButton(page.transform, "Start Game", new Vector2(0, 40), menus.OnStart);
         MakeButton(page.transform, "Instructions", new Vector2(0, -40), menus.OnInstructions);
         MakeButton(page.transform, "Credits", new Vector2(0, -120), menus.OnCredits);
@@ -1371,12 +1394,12 @@ public class GameBootstrap : MonoBehaviour
     GameObject BuildEndPage(Transform parent, Menus menus, string title, Color titleColor, out Text resultText)
     {
         GameObject page = MakePagePanel(parent, title + "Page", new Color(0.03f, 0.02f, 0.05f, 0.8f));
-        MakeUiImage(page.transform, "ResultPanel", new Vector2(0, 20), new Vector2(0.5f, 0.5f), new Vector2(980, 520), new Color(0.85f, 0.9f, 1f, 0.92f), UiPanelSpritePath);
-        MakeText(page.transform, title, new Vector2(0, 195), new Vector2(0.5f, 0.5f), 76, TextAnchor.MiddleCenter, titleColor);
-        resultText = MakeText(page.transform, "", new Vector2(0, 70), new Vector2(0.5f, 0.5f), 30, TextAnchor.MiddleCenter, Color.white);
-        resultText.GetComponent<RectTransform>().sizeDelta = new Vector2(900, 120);
-        MakeButton(page.transform, "Play Again", new Vector2(0, -60), menus.OnRestart);
-        MakeButton(page.transform, "Main Menu", new Vector2(0, -140), menus.OnReturnHome);
+        MakeUiImage(page.transform, "ResultPanel", new Vector2(0, 18), new Vector2(0.5f, 0.5f), new Vector2(1020, 650), new Color(0.85f, 0.9f, 1f, 0.92f), UiPanelSpritePath);
+        MakeText(page.transform, title, new Vector2(0, 285), new Vector2(0.5f, 0.5f), 70, TextAnchor.MiddleCenter, titleColor);
+        resultText = MakeText(page.transform, "", new Vector2(0, 45), new Vector2(0.5f, 0.5f), 24, TextAnchor.MiddleCenter, Color.white);
+        resultText.GetComponent<RectTransform>().sizeDelta = new Vector2(930, 410);
+        MakeButton(page.transform, "Play Again", new Vector2(0, -250), menus.OnRestart);
+        MakeButton(page.transform, "Main Menu", new Vector2(0, -330), menus.OnReturnHome);
         page.SetActive(false);
         return page;
     }
@@ -1549,6 +1572,49 @@ public class RuntimeMusicController : MonoBehaviour
                 source.volume = menuVolume;
                 break;
         }
+    }
+}
+
+/// Visual-only helper that points from the player toward the current key, exit, or boss objective.
+public class ObjectiveDirectionHint : MonoBehaviour
+{
+    public Transform player;
+    public SpriteRenderer rendererRef;
+    public float distanceFromPlayer = 0.95f;
+    public float hideDistance = 0.75f;
+
+    // What: Keep a small arrow near the player and rotate it toward the next objective.
+    // Human: Wanted faster objective readability during live demos.
+    // AI: Helped make the hint read GameManager state instead of duplicating rules.
+    void Update()
+    {
+        if (rendererRef == null) rendererRef = GetComponent<SpriteRenderer>();
+
+        Vector3 target = Vector3.zero;
+        bool visible = player != null &&
+            GameManager.I != null &&
+            GameManager.I.phase == GameManager.Phase.Playing &&
+            GameManager.I.TryGetCurrentObjectivePosition(out target);
+
+        if (!visible)
+        {
+            if (rendererRef != null) rendererRef.enabled = false;
+            return;
+        }
+
+        Vector3 toTarget = target - player.position;
+        toTarget.z = 0f;
+        if (toTarget.magnitude <= hideDistance)
+        {
+            if (rendererRef != null) rendererRef.enabled = false;
+            return;
+        }
+
+        Vector3 direction = toTarget.normalized;
+        transform.position = player.position + direction * distanceFromPlayer + new Vector3(0f, 0.42f, 0f);
+        transform.up = direction;
+        transform.localScale = Vector3.one * (1f + Mathf.PingPong(Time.time * 1.8f, 0.18f));
+        if (rendererRef != null) rendererRef.enabled = true;
     }
 }
 
