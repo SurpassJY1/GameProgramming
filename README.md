@@ -8,7 +8,7 @@ The project is scoped for a game programming module assessment: one playable lev
 
 1. Open Unity Hub.
 2. Add the project folder: `Project2DImproved 2`.
-3. Open the scene: `Assets/Scenes/StarBlaster.unity`.
+3. Open the scene: `Assets/Scenes/DungeonKeyRun.unity`.
 4. Press Play.
 
 The scene uses `GameBootstrap.cs` to build the full level at runtime and load selected sprite assets from `Assets/StreamingAssets`.
@@ -104,5 +104,4 @@ All local runtime assets are documented above with source and license/status. No
 ## Known Limitations
 
 - The final submission is one vertical slice level, not a full multi-level game.
-- The scene filename is still `StarBlaster.unity` from earlier classroom work, but the runtime game content is `Dungeon Key Run`.
 - Testing is recorded manually in `docs/TestLog.md`.

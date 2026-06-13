@@ -41,7 +41,7 @@ Feedback improvements included:
 
 The main limitation is that the game is a single-level vertical slice. It does not include multiple levels, save data, combat, or advanced enemy pathfinding. This was an intentional scope decision to keep the final result stable and explainable.
 
-The scene file name still uses an earlier classroom name, `StarBlaster.unity`, but the runtime content and documentation are now focused on `Dungeon Key Run`.
+The Unity scene is named `DungeonKeyRun.unity` so the project entry point matches the finished game identity.
 
 There are no automated tests. Testing is manual because the project is small and most assessment-relevant behaviours are player interaction flows.
 
