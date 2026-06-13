@@ -2,6 +2,26 @@
 
 Unity 2D dungeon game project.
 
+## Demo Guide
+
+Dungeon Key Run is an endless top-down dungeon run. The goal is to reach deeper floors, survive
+boss encounters, and beat the saved best score.
+
+### How to Play
+
+- Move with WASD or the arrow keys.
+- Aim with the mouse and hold the left mouse button to shoot.
+- Press ESC to pause.
+- Collect the gold key on each floor, then reach the blue exit door.
+- Every third floor is a boss floor. On boss floors, the exit stays sealed until the boss is
+  defeated.
+- Defeating enemies grants XP. Leveling up opens a weapon upgrade choice.
+- Clearing a floor opens a passive upgrade choice before the next floor starts.
+- The HUD shows floor, lives, key state, defeated enemies, score, level, XP, time, and the current
+  objective.
+- After a run ends, the game records local best score, best floor, and a Top 5 leaderboard with
+  PlayerPrefs.
+
 ## Assets and Licenses
 
 This README lists every image and audio resource group included in the project, with source,
