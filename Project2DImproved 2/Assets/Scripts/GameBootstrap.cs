@@ -218,6 +218,7 @@ public class GameBootstrap : MonoBehaviour
         GameObject player = BuildPlayer();
         playerTransform = player.transform;
         playerController = player.GetComponent<Player>();
+        BuildObjectiveDirectionHint(playerTransform);
         if (GameManager.I != null) GameManager.I.OnFloorStarted += BuildCurrentFloor;
         BuildFloor(1);
         BuildHUD();
@@ -383,8 +384,9 @@ public class GameBootstrap : MonoBehaviour
         for (int i = 0; i < room.walls.Length; i++)
             BuildWall("Room Wall " + i, room.walls[i].position, room.walls[i].size, wallSprite);
 
-        BuildKey(room.keyPosition);
-        BuildExit(room.exitPosition);
+        Vector3 keyPosition = BuildKey(room.keyPosition);
+        Vector3 exitPosition = BuildExit(room.exitPosition);
+        if (GameManager.I != null) GameManager.I.RegisterFloorObjectivePositions(keyPosition, exitPosition);
 
         // Later floors add enemies and unlock stronger enemy types, but the same key-to-exit
         // objective remains so the core rule is easy to understand. Every third floor adds a boss
@@ -625,6 +627,23 @@ public class GameBootstrap : MonoBehaviour
         return go;
     }
 
+    // What: Add a small world-space arrow that points toward the next objective.
+    // Human: Wanted first-time players to find the key, exit, and boss quickly in a demo.
+    // AI: Helped keep the hint visual-only so it does not change gameplay rules.
+    void BuildObjectiveDirectionHint(Transform player)
+    {
+        if (player == null) return;
+
+        GameObject hint = new GameObject("Objective Direction Hint");
+        SpriteRenderer sr = hint.AddComponent<SpriteRenderer>();
+        sr.sprite = Art2D.Triangle(new Color(1f, 0.82f, 0.22f, 0.92f), 48);
+        sr.sortingOrder = 8;
+
+        ObjectiveDirectionHint controller = hint.AddComponent<ObjectiveDirectionHint>();
+        controller.player = player;
+        controller.rendererRef = sr;
+    }
+
     // What: Create an inactive bullet prefab used by PlayerCombat.
     // Human: Chose bullet visuals, size, and impact sound.
     // AI: Helped build a prefab-like object entirely in code.
@@ -657,7 +676,7 @@ public class GameBootstrap : MonoBehaviour
     // What: Create the floor key pickup at a wall-safe position.
     // Human: Designed key collection as the first objective.
     // AI: Helped use safe-position helpers so keys do not spawn inside walls.
-    void BuildKey(Vector2 position)
+    Vector3 BuildKey(Vector2 position)
     {
         GameObject key = new GameObject("Gold Key");
         key.transform.SetParent(currentFloorRoot.transform);
@@ -672,12 +691,13 @@ public class GameBootstrap : MonoBehaviour
         col.isTrigger = true;
         col.radius = 0.55f;
         key.AddComponent<KeyPickup>();
+        return key.transform.position;
     }
 
     // What: Create the exit door at a wall-safe position.
     // Human: Designed the key-to-exit objective loop.
     // AI: Helped keep visual door state separate from GameManager exit rules.
-    void BuildExit(Vector2 position)
+    Vector3 BuildExit(Vector2 position)
     {
         GameObject exit = new GameObject("Exit Door");
         exit.transform.SetParent(currentFloorRoot.transform);
@@ -692,6 +712,7 @@ public class GameBootstrap : MonoBehaviour
         col.isTrigger = true;
         col.size = Vector2.one;
         exit.AddComponent<ExitDoor>();
+        return exit.transform.position;
     }
 
     // What: Calculate how many non-boss enemies spawn on a floor.
@@ -1549,6 +1570,49 @@ public class RuntimeMusicController : MonoBehaviour
                 source.volume = menuVolume;
                 break;
         }
+    }
+}
+
+/// Visual-only helper that points from the player toward the current key, exit, or boss objective.
+public class ObjectiveDirectionHint : MonoBehaviour
+{
+    public Transform player;
+    public SpriteRenderer rendererRef;
+    public float distanceFromPlayer = 0.95f;
+    public float hideDistance = 0.75f;
+
+    // What: Keep a small arrow near the player and rotate it toward the next objective.
+    // Human: Wanted faster objective readability during live demos.
+    // AI: Helped make the hint read GameManager state instead of duplicating rules.
+    void Update()
+    {
+        if (rendererRef == null) rendererRef = GetComponent<SpriteRenderer>();
+
+        Vector3 target = Vector3.zero;
+        bool visible = player != null &&
+            GameManager.I != null &&
+            GameManager.I.phase == GameManager.Phase.Playing &&
+            GameManager.I.TryGetCurrentObjectivePosition(out target);
+
+        if (!visible)
+        {
+            if (rendererRef != null) rendererRef.enabled = false;
+            return;
+        }
+
+        Vector3 toTarget = target - player.position;
+        toTarget.z = 0f;
+        if (toTarget.magnitude <= hideDistance)
+        {
+            if (rendererRef != null) rendererRef.enabled = false;
+            return;
+        }
+
+        Vector3 direction = toTarget.normalized;
+        transform.position = player.position + direction * distanceFromPlayer + new Vector3(0f, 0.42f, 0f);
+        transform.up = direction;
+        transform.localScale = Vector3.one * (1f + Mathf.PingPong(Time.time * 1.8f, 0.18f));
+        if (rendererRef != null) rendererRef.enabled = true;
     }
 }
 
