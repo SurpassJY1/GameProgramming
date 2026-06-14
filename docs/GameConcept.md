@@ -2,43 +2,70 @@
 
 ## Game Idea
 
-`Dungeon Key Run` is a short 2D top-down dungeon escape game. The player starts in a locked dungeon, must collect a gold key, avoid patrolling guards, and reach the exit door.
+`Dungeon Key Run` is a Unity 2D top-down dungeon shooter. The player explores
+dungeon floors, defeats enemies, collects the gold key, reaches the blue exit
+door, and pushes deeper into the run to improve the saved local best score.
 
 ## Intended Player Experience
 
-The game is designed to feel tense but readable. The player should understand the goal quickly, plan a route through the dungeon, watch guard movement, and feel rewarded when the exit unlocks after collecting the key.
+The game is designed to feel tense but readable. The player should quickly
+understand the current objective, use movement and shooting to control danger,
+watch the HUD for key and floor state, and feel rewarded by upgrades between
+floors.
 
 ## Core Mechanic
 
-The main mechanic is route planning under pressure. The key and exit are separated, and guards patrol between important routes. The player does not fight; success comes from movement, timing, and awareness.
+The core loop is:
+
+1. Explore the current floor.
+2. Defeat enemies for XP and score.
+3. Collect the gold key.
+4. Reach the blue exit door.
+5. Choose a passive floor-clear upgrade.
+6. Continue to deeper floors and boss encounters.
+
+Every third floor is a boss floor. On those floors, the exit stays sealed until
+the boss is defeated.
 
 ## Scope
 
-The project is intentionally scoped as one polished vertical slice:
+The project is scoped as a polished dungeon run vertical slice:
 
-- One complete dungeon level
-- One player character
-- One key and one exit
-- Two guards with patrol and chase behaviour
-- Menus, HUD, win state, fail state, and pause state
+- One main playable Unity scene.
+- Top-down movement, mouse aiming, and shooting.
+- Enemy encounters, boss floors, lives, scoring, XP, and level-up choices.
+- Key pickup and exit-door progression.
+- Passive upgrade choices after floor clears.
+- Start, pause, game-over, restart, and leaderboard UI.
+- Runtime fallback sprites/sounds plus documented third-party assets.
 
-Features such as multiplayer, inventory systems, combat, procedural campaign generation, and multiple levels are out of scope.
+Features such as multiplayer, network play, inventory systems, cutscenes, and a
+large handcrafted campaign are out of scope.
 
 ## Tools and Resources
 
 - Engine: Unity `2022.3.62f1`
 - Language: C#
-- Input: Unity legacy input axes for simple keyboard controls
-- Assets: procedural sprites and audio generated in code
+- Input: keyboard movement, mouse aiming, and mouse shooting
+- Assets: project-generated sprites, runtime fallback art/audio, Kenney CC0
+  assets, and one CC BY 4.0 music track
 - Version control: Git and GitHub
 
 ## Legal, Ethical, Social, Accessibility, and Security Issues
 
-- Legal: no third-party art, audio, fonts, or Asset Store assets are used, so licensing risk is low.
-- Ethical/social: the game uses abstract guards and non-graphic failure feedback.
-- Accessibility: controls are stated in the menu and README, key state is shown through text as well as colour, and the goal is repeated through objective text.
-- Security: the project does not collect personal data, use networking, or load external files at runtime.
+- Legal: third-party resources are limited to documented free assets. Kenney
+  image/audio packs are CC0, and the Kevin MacLeod music track is credited under
+  CC BY 4.0 in the README and CREDITS file.
+- Ethical/social: the game uses stylized fantasy combat and non-graphic failure
+  feedback.
+- Accessibility: controls are stated in the README, key state and objectives are
+  shown through text, and the HUD does not rely only on colour.
+- Security: the project does not collect personal data, use networking, or load
+  remote files.
 
 ## Success Criteria
 
-The submission is successful if a first-time player can start the game, understand the goal, collect the key, avoid guards, reach the exit, and see a clear win or fail result without needing extra explanation.
+The submission is successful if a first-time player can open the documented
+scene, start a run, understand the objective, move and shoot, collect the key,
+clear normal and boss-floor objectives, choose upgrades, and see clear run-end
+feedback without needing extra explanation.
