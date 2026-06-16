@@ -4,7 +4,7 @@
 
 | Area | Test | Expected Result | Status |
 | --- | --- | --- | --- |
-| Project setup | Open `Project2DImproved 2/Assets/Scenes/StarBlaster.unity` | Main playable scene opens in Unity | Pass in code review |
+| Project setup | Open `Dungeon Key Run/Assets/Scenes/DungeonKeyRun.unity` | Main playable scene opens in Unity | Pass in code review |
 | Menu | Start from main menu | Run begins and HUD appears | Pass in code review |
 | Movement | Move with WASD/arrows | Player moves in four directions | Pass in code review |
 | Aiming | Move mouse while playing | Player aim direction follows the mouse | Pass in code review |
@@ -44,8 +44,7 @@ enemy difficulty, boss pacing, audio balance, and readability of upgrade choices
 
 ## Known Issues and Limitations
 
-- The Unity scene file name remains `StarBlaster.unity` from earlier classroom
-  work, although the built game content is `Dungeon Key Run`.
+- The Unity scene file is `DungeonKeyRun.unity`, matching the final game title.
 - There are no automated Unity tests.
 - Floor layouts and enemy behaviours are intentionally compact for a vertical
   slice.

@@ -9,7 +9,7 @@ Built with **Unity 2022.3.62f1**.
 ## Quick Start
 
 1. Open this folder as a Unity project.
-2. Open `Assets/Scenes/StarBlaster.unity`.
+2. Open `Assets/Scenes/DungeonKeyRun.unity`.
 3. Press Play in the Unity Editor.
 
 Unity cache folders such as `Library/`, `Logs/`, `Temp/`, `obj/`, and
@@ -66,7 +66,7 @@ the boss is defeated.
 ```text
 Assets/
 +-- Scenes/
-|   +-- StarBlaster.unity ........ main playable scene
+|   +-- DungeonKeyRun.unity ........ main playable scene
 +-- Scripts/
 |   +-- GameBootstrap.cs ......... scene setup and runtime wiring
 |   +-- GameManager.cs ........... run state, floors, scoring, upgrades

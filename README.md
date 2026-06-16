@@ -7,7 +7,7 @@ The project is scoped for a game programming module assessment: one playable lev
 ## How to Run
 
 1. Open Unity Hub.
-2. Add the project folder: `Project2DImproved 2`.
+2. Add the project folder: `Dungeon Key Run`.
 3. Open the scene: `Assets/Scenes/DungeonKeyRun.unity`.
 4. Press Play.
 
@@ -52,10 +52,9 @@ GameProgramming/
     GameConcept.md
     SprintPlan.md
     TestLog.md
-    AssetCredits.md
     FinalReport.md
     PresentationPlan.md
-  Project2DImproved 2/
+  Dungeon Key Run/
     Assets/
     Packages/
     ProjectSettings/
@@ -64,39 +63,39 @@ GameProgramming/
 ## Credits and Licensing
 
 - **Project code and gameplay logic**: original work for this project.
-- **Unity engine and packages**: Unity `2022.3.62f1` and packages in `Project2DImproved 2/Packages/manifest.json`; used under Unity's package and editor terms.
+- **Unity engine and packages**: Unity `2022.3.62f1` and packages in `Dungeon Key Run/Packages/manifest.json`; used under Unity's package and editor terms.
 - **Fonts**: Unity built-in `LegacyRuntime.ttf`, loaded through `Resources.GetBuiltinResource`; no external font files are included.
-- **Sound effects**: generated procedurally in `Project2DImproved 2/Assets/Scripts/Art2D.cs`; no external audio files are included.
+- **Sound effects**: generated procedurally in `Dungeon Key Run/Assets/Scripts/Art2D.cs`; no external audio files are included.
 - **Project-generated cute pixel visual assets**:
   - The current primary visual set is original project-generated pixel art created for this project.
   - License/status: original project work for this module; no external image license is required.
   - Local files:
-    - `Project2DImproved 2/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/floor_tile.png`
-    - `Project2DImproved 2/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/wall_tile.png`
-    - `Project2DImproved 2/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/player.png`
-    - `Project2DImproved 2/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/enemy.png`
-    - `Project2DImproved 2/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/key.png`
-    - `Project2DImproved 2/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/exit_gate.png`
-    - `Project2DImproved 2/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/projectile.png`
-    - `Project2DImproved 2/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/ui_panel.png`
-    - `Project2DImproved 2/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/ui_button.png`
-  - Additional fallback sprites, lighting glows, shadows, upgrade icons, and the 10 procedural enemy type sprites are generated in `Project2DImproved 2/Assets/Scripts/Art2D.cs` and `Project2DImproved 2/Assets/Scripts/GameBootstrap.cs`.
+    - `Dungeon Key Run/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/floor_tile.png`
+    - `Dungeon Key Run/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/wall_tile.png`
+    - `Dungeon Key Run/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/player.png`
+    - `Dungeon Key Run/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/enemy.png`
+    - `Dungeon Key Run/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/key.png`
+    - `Dungeon Key Run/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/exit_gate.png`
+    - `Dungeon Key Run/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/projectile.png`
+    - `Dungeon Key Run/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/ui_panel.png`
+    - `Dungeon Key Run/Assets/StreamingAssets/generated/pixel-cute-dungeon/selected/ui_button.png`
+  - Additional fallback sprites, lighting glows, shadows, upgrade icons, and the 10 procedural enemy type sprites are generated in `Dungeon Key Run/Assets/Scripts/Art2D.cs` and `Dungeon Key Run/Assets/Scripts/GameBootstrap.cs`.
 - **Third-party fallback sprite assets (Kenney Topdown Shooter)**:
   - Source: [Kenney - Topdown Shooter (OpenGameArt mirror)](https://opengameart.org/content/topdown-shooter)
   - License: **Creative Commons Zero (CC0 1.0)**.
-  - Local license copy: `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/License.txt`
+  - Local license copy: `Dungeon Key Run/Assets/StreamingAssets/thirdparty/topdown-shooter/License.txt`
   - Tile texture provenance (academic integrity):
-    - In-use wall texture: `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/wall_tile.png`
-    - In-use floor texture: `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/floor_tile.png`
+    - In-use wall texture: `Dungeon Key Run/Assets/StreamingAssets/thirdparty/topdown-shooter/wall_tile.png`
+    - In-use floor texture: `Dungeon Key Run/Assets/StreamingAssets/thirdparty/topdown-shooter/floor_tile.png`
     - Both are retained under `Assets/StreamingAssets/thirdparty/topdown-shooter/` from the credited Kenney pack.
   - Local files:
-    - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/player.png`
-    - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/enemy.png`
-    - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/floor.png`
-    - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/floor_tile.png`
-    - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/wall.png`
-    - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/wall_tile.png`
-    - `Project2DImproved 2/Assets/StreamingAssets/thirdparty/topdown-shooter/wall_tile_contrast.png`
+    - `Dungeon Key Run/Assets/StreamingAssets/thirdparty/topdown-shooter/player.png`
+    - `Dungeon Key Run/Assets/StreamingAssets/thirdparty/topdown-shooter/enemy.png`
+    - `Dungeon Key Run/Assets/StreamingAssets/thirdparty/topdown-shooter/floor.png`
+    - `Dungeon Key Run/Assets/StreamingAssets/thirdparty/topdown-shooter/floor_tile.png`
+    - `Dungeon Key Run/Assets/StreamingAssets/thirdparty/topdown-shooter/wall.png`
+    - `Dungeon Key Run/Assets/StreamingAssets/thirdparty/topdown-shooter/wall_tile.png`
+    - `Dungeon Key Run/Assets/StreamingAssets/thirdparty/topdown-shooter/wall_tile_contrast.png`
   - Attribution note: the source indicates credit is optional, but this README includes explicit credit for academic transparency and to avoid misconduct concerns.
 
 All local runtime assets are documented above with source and license/status. No paid or restricted-license assets are included. A network attempt was made to reach the planned itch.io resource, but the environment could not connect, so no Ninja Adventure or Adventure UI files are included or claimed as used.
