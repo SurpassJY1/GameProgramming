@@ -24,11 +24,14 @@ AI assistance was used as a tool, not as an external asset pack or copied third-
 
 ## Art
 
-Primary gameplay and UI visuals now use third-party CC0 assets loaded from
-`Assets/StreamingAssets/thirdparty/`.
+Primary gameplay visuals use project-generated original sprites loaded from
+`Assets/StreamingAssets/generated/`, with documented third-party CC0 assets kept
+in `Assets/StreamingAssets/thirdparty/` where they are used or available as
+fallback/reference resources.
 
-Several high-readability gameplay sprites are project-generated original art created specifically
-for this module after testing showed the third-party tiles were not visually clear enough in game:
+Several high-readability gameplay sprites were created specifically for this
+module after testing showed some third-party tiles were not visually clear
+enough in game:
 
 - License/status: original project work; no external image license required
 - Local files used:
@@ -77,6 +80,11 @@ Procedural visuals remain in `Assets/Scripts/Art2D.cs` only as fallback/generate
 - `SolidCircle` for particle/fallback shapes
 - `SoftRectangle`, `Diamond`, `Square`, `Key`, `ExitGate`, and enemy icons when an external file is missing
 - Weapon/passive upgrade icons and small transient VFX
+
+The runtime enemy roster also uses generated/project visuals for normal enemy
+roles and boss/elite variants, including Slime Scout, Tiny Bat, Shield Guard,
+Spark Spitter, Bomb Sprite, Frost Wisp, Dash Imp, Healer Fairy, Summoner Shade,
+Crystal Brute, Slime King, Frost Queen, Shade Overlord, and Crystal Titan.
 
 Project-generated selected sprites are original project work for this module and do not require an external image license:
 

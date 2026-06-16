@@ -34,7 +34,7 @@ later floors feel different while keeping the control scheme simple.
 
 ## Technical Decisions
 
-The main scene is `Project2DImproved 2/Assets/Scenes/StarBlaster.unity`.
+The main scene is `Dungeon Key Run/Assets/Scenes/DungeonKeyRun.unity`.
 Although the scene name comes from an earlier classroom project, the runtime
 content is now `Dungeon Key Run`.
 
@@ -55,7 +55,7 @@ The main gameplay scripts are:
 Assets are loaded from `Assets/StreamingAssets/`. Third-party resources are kept
 under `Assets/StreamingAssets/thirdparty/` with local license or attribution
 files. Project-generated sprites are kept under `Assets/StreamingAssets/generated/`.
-Detailed credits live in `Project2DImproved 2/CREDITS.md`.
+Detailed credits live in `Dungeon Key Run/CREDITS.md`.
 
 ## Development Process
 
@@ -113,7 +113,7 @@ Important code to mention during presentation:
 
 ## Problems and Limitations
 
-The scene file name still uses the earlier classroom name `StarBlaster.unity`.
+The scene file name still uses the earlier classroom name `DungeonKeyRun.unity`.
 This is documented in the README and quick start so the correct scene is easy to
 open.
 
